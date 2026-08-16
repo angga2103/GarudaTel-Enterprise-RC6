@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Logs Digiflazz · Admin{% endblock %}
+{% block body %}
+{% include '_navbar_admin.html' %}
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight text-[#115E59]">Logs Digiflazz API</h1>
+    <p class="text-sm text-slate-600 mt-1">Semua hit ke endpoint Digiflazz tercatat di sini (auto-pull, transaksi, dsb).</p>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50/50 text-[11px] uppercase text-slate-600 tracking-wider"><tr><th class="text-left px-3 py-2.5 font-semibold">Waktu</th><th class="text-left px-3 py-2.5 font-semibold">Endpoint</th><th class="text-left px-3 py-2.5 font-semibold">Order</th><th class="text-center px-3 py-2.5 font-semibold">HTTP</th><th class="text-left px-3 py-2.5 font-semibold">Response (snippet)</th></tr></thead>
+      <tbody class="divide-y divide-ink-100">
+        {% for l in logs %}
+          <tr class="hover:bg-slate-50/50/60"><td class="px-3 py-2.5 text-xs text-slate-600 whitespace-nowrap">{{ l.created_at | wib }}</td><td class="px-3 py-2.5 font-mono text-xs text-slate-800">{{ l.endpoint }}</td><td class="px-3 py-2.5 font-mono text-xs text-slate-600">{{ l.order_id or '—' }}</td><td class="px-3 py-2.5 text-center"><span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ 'bg-emerald-50 text-emerald-700' if l.status_code==200 else 'bg-rose-50 text-rose-700' }}">{{ l.status_code or '?' }}</span></td><td class="px-3 py-3 text-[11px] text-slate-800 min-w-[250px] max-w-xs md:max-w-4xl break-all whitespace-pre-wrap font-mono">{{ l.response_body if l.response_body else '—' }}</td></tr>
+        {% else %}
+          <tr><td colspan="5" class="px-3 py-10 text-center text-slate-500">Belum ada log Digiflazz.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}

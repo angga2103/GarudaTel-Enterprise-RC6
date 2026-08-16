@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% block title %}Firebase Integration · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Firebase Cloud Messaging</h1>
+                <p class="text-sm text-slate-600 mt-1">Push notification dan broadcast management</p>
+            </div>
+            <a href="/admin/integration-center" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                ← Kembali
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Status Konfigurasi</h2>
+            <div id="firebase-status-badge" class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                Loading...
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Project ID</div>
+                <div id="firebase-project-id" class="text-sm font-mono text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Sender ID</div>
+                <div id="firebase-sender-id" class="text-sm font-mono text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Client Email</div>
+                <div id="firebase-client-email" class="text-sm font-mono text-slate-800 truncate">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Registered Devices</div>
+            <div id="stat-total-devices" class="text-3xl font-black text-[#115E59]">0</div>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-green-600 font-semibold uppercase tracking-wider mb-2">Valid Tokens</div>
+            <div id="stat-valid-tokens" class="text-3xl font-black text-green-700">0</div>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-red-600 font-semibold uppercase tracking-wider mb-2">Invalid Tokens</div>
+            <div id="stat-invalid-tokens" class="text-3xl font-black text-red-700">0</div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-2">Last Broadcast</div>
+            <div id="stat-last-broadcast" class="text-sm font-bold text-amber-700">Never</div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Actions</h2>
+        
+        <div class="flex flex-wrap gap-3">
+            <button onclick="testFirebaseConnection()" class="px-4 py-2.5 bg-[#115E59] hover:bg-[#165654] text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Test Connection
+            </button>
+            
+            <button onclick="validateAllTokens()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Validate Tokens
+            </button>
+            
+            <button onclick="refreshStats()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Registered Devices List -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Registered Devices</h2>
+        
+        <div id="devices-list" class="space-y-2">
+            <div class="text-center py-8 text-slate-500">Loading devices...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let firebaseStats = {};
+
+async function loadFirebaseConfig() {
+    try {
+        const res = await fetch('/admin/api/firebase/config');
+        const data = await res.json();
+        
+        if (data.ok) {
+            const badge = document.getElementById('firebase-status-badge');
+            if (data.is_configured) {
+                badge.className = 'px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Configured';
+            } else {
+                badge.className = 'px-3 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Not Configured';
+            }
+            
+            document.getElementById('firebase-project-id').textContent = data.project_id || '-';
+            document.getElementById('firebase-sender-id').textContent = data.sender_id || '-';
+            document.getElementById('firebase-client-email').textContent = data.client_email || '-';
+        }
+    } catch (e) {
+        console.error('Failed to load Firebase config:', e);
+    }
+}
+
+async function loadFirebaseStats() {
+    try {
+        const res = await fetch('/admin/api/firebase/stats');
+        const data = await res.json();
+        
+        if (data.ok) {
+            firebaseStats = data;
+            
+            document.getElementById('stat-total-devices').textContent = data.total_devices || 0;
+            document.getElementById('stat-valid-tokens').textContent = data.valid_tokens || 0;
+            document.getElementById('stat-invalid-tokens').textContent = data.invalid_tokens || 0;
+            document.getElementById('stat-last-broadcast').textContent = data.last_broadcast || 'Never';
+            
+            renderDevicesList(data.devices || []);
+        }
+    } catch (e) {
+        console.error('Failed to load Firebase stats:', e);
+    }
+}
+
+function renderDevicesList(devices) {
+    const container = document.getElementById('devices-list');
+    
+    if (devices.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-slate-500">Tidak ada device terdaftar</div>';
+        return;
+    }
+    
+    container.innerHTML = devices.map((device, idx) => `
+        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-[#115E59] text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    ${idx + 1}
+                </div>
+                <div>
+                    <div class="text-sm font-semibold text-slate-800">${device.username}</div>
+                    <div class="text-xs text-slate-500 font-mono">${device.fcm_token.substring(0, 40)}...</div>
+                </div>
+            </div>
+            <div class="text-xs text-slate-500">User #${device.user_id}</div>
+        </div>
+    `).join('');
+}
+
+async function testFirebaseConnection() {
+    Swal.fire({
+        title: 'Testing Connection...',
+        text: 'Mengirim test notification',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/firebase/test', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Test Berhasil!',
+                text: `Terkirim ke ${data.success_count} device`,
+                confirmButtonColor: '#115E59'
+            });
+            refreshStats();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Test Gagal',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+async function validateAllTokens() {
+    Swal.fire({
+        title: 'Validating Tokens...',
+        text: 'Memeriksa semua FCM token',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/firebase/validate', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'info',
+                title: 'Validation Selesai',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-2">Valid tokens: <strong class="text-green-600">${data.valid_count}</strong></p>
+                        <p>Invalid tokens: <strong class="text-red-600">${data.invalid_count}</strong></p>
+                        ${data.invalid_count > 0 ? '<p class="mt-3 text-sm text-slate-600">Invalid tokens telah dihapus dari database.</p>' : ''}
+                    </div>
+                `,
+                confirmButtonColor: '#115E59'
+            });
+            refreshStats();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Gagal',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+function refreshStats() {
+    loadFirebaseConfig();
+    loadFirebaseStats();
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadFirebaseConfig();
+    loadFirebaseStats();
+});
+</script>
+{% endblock %}

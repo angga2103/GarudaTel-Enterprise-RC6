@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block body %}
+{% include '_navbar_user.html' %}
+<main class="w-full md:max-w-3xl mx-auto bg-slate-50 min-h-screen pb-24 font-sans">
+  <div class="bg-slate-900 px-5 pt-8 pb-10 rounded-b-[2.5rem] relative shadow-lg">
+    <div class="flex items-center gap-3 text-white mb-2 relative z-10">
+      <a href="{{ url_for('user.dashboard') }}" class="hover:bg-white/20 p-2 rounded-full transition-all">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+      </a>
+      <h1 class="text-xl font-bold tracking-wide">Pusat Kendali Toko</h1>
+    </div>
+  </div>
+
+  <div class="px-5 -mt-6 relative z-20">
+    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl text-white mb-6">
+        <div class="flex justify-between items-center opacity-80 mb-1">
+            <span class="text-[10px] font-bold uppercase tracking-widest">Profit Hari Ini</span>
+            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-md font-bold">{{ today_trx_count }} TRX</span>
+        </div>
+        <div class="flex items-baseline gap-1">
+            <span class="text-sm font-medium opacity-90">Rp</span>
+            <span class="text-3xl font-black tracking-tight">{{ "{:,.0f}".format(today_profit).replace(",", ".") }}</span>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-4 p-4 text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-2xl font-bold text-xs text-center">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="space-y-4">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <label class="text-[10px] font-bold text-slate-400 uppercase">Nama Toko</label>
+            <input type="text" name="shop_name" value="{{ current_user.shop_name or '' }}" class="w-full border-b border-slate-100 py-2 outline-none font-bold text-slate-700">
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+            <label class="text-[10px] font-bold text-slate-400 uppercase">Keuntungan (Rp/Trx)</label>
+            <input type="number" name="markup_profit" value="{{ current_user.markup_profit or 0 }}" class="w-full border-b border-slate-100 py-2 outline-none font-bold text-teal-600">
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 grid grid-cols-2 gap-4">
+            <div>
+                <label class="text-[9px] font-bold text-slate-400 uppercase">PIN Staff 1</label>
+                <input type="password" name="pin_staff1" value="{{ current_user.pin_staff1 or '' }}" maxlength="6" class="w-full border-b border-slate-100 py-2 text-center font-bold tracking-widest outline-none">
+            </div>
+            <div>
+                <label class="text-[9px] font-bold text-slate-400 uppercase">PIN Staff 2</label>
+                <input type="password" name="pin_staff2" value="{{ current_user.pin_staff2 or '' }}" maxlength="6" class="w-full border-b border-slate-100 py-2 text-center font-bold tracking-widest outline-none">
+            </div>
+        </div>
+
+        {% if not current_user.active_shift_id %}
+        <div class="mb-5 bg-rose-50 border-2 border-rose-200 p-4 rounded-2xl shadow-sm">
+            <label class="block text-xs font-bold text-rose-700 uppercase tracking-wider mb-2">🔒 Verifikasi Keamanan (PIN Staff/Admin)</label>
+            <input type="password" name="auth_pin" inputmode="numeric" class="w-full bg-white border border-rose-300 text-slate-800 text-sm rounded-xl focus:ring-rose-500 focus:border-rose-500 block p-3 shadow-inner" placeholder="Masukkan PIN Staff atau Admin..." required>
+            <p class="text-[10px] text-rose-500 mt-1.5 font-medium">*Toko tutup. Masukkan PIN Anda untuk membuktikan identitas.</p>
+        </div>
+        {% endif %}
+        <button type="submit" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">SIMPAN PENGATURAN</button>
+    </form>
+
+    <div class="mt-10 mb-4 w-full">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between px-1">
+            <span>📊 Riwayat Uang Laci</span>
+            <span class="text-[10px] font-bold text-slate-500 bg-slate-200/50 px-2.5 py-1 rounded-md tracking-wider">15 TRX TERAKHIR</span>
+        </h3>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto pb-1">
+                <table class="w-full text-left text-xs text-slate-600 min-w-[460px]">
+                    <thead class="bg-slate-800 text-[10px] uppercase font-bold text-white">
+                        <tr>
+                            <th class="px-4 py-3.5">Kasir</th>
+                            <th class="px-4 py-3.5">Buka - Tutup</th>
+                            <th class="px-4 py-3.5 text-right">Setoran</th>
+                            <th class="px-4 py-3.5 text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for s in shifts %}
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3.5 font-semibold text-slate-700 whitespace-nowrap">{{ s.staff_name }}</td>
+                            <td class="px-4 py-3.5 whitespace-nowrap">
+                                <div class="font-mono text-[10px] text-emerald-600 font-semibold border-b border-emerald-50 pb-1 mb-1">B: {{ s.start_time[:16] if s.start_time else '-' }}</div>
+                                <div class="font-mono text-[10px] text-rose-600 font-semibold">T: {{ s.end_time[:16] if s.end_time else '-' }}</div>
+                            </td>
+                            <td class="px-4 py-3.5 text-right font-bold text-teal-600 whitespace-nowrap text-sm">
+                                {% set uang = s.setoran_akhir or 0 %}
+                                Rp {{ "{:,.0f}".format(uang|int)|replace(',', '.') }}
+                            </td>
+                            <td class="px-4 py-3.5 text-center">
+                                {% if s.status == 'open' %}
+                                <span class="bg-rose-100 text-rose-700 py-1.5 px-3 rounded-full text-[9px] font-bold shadow-sm">AKTIF</span>
+                                {% else %}
+                                <span class="bg-slate-100 text-slate-500 py-1.5 px-3 rounded-full text-[9px] font-bold shadow-sm">TUTUP</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">Belum ada riwayat shift kasir.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <p class="text-[9px] text-center text-slate-400 mt-3 font-medium">*Geser tabel ke kiri/kanan untuk melihat detail</p>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

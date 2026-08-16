@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% block title %}Top Up · {{ APP_NAME }}
+<div id="qrisModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
+        <h2 class="text-lg font-bold text-slate-800">Scan QRIS</h2>
+        <img id="qrisImage" src="" class="w-full h-auto my-4 border rounded-xl" alt="QRIS">
+        <button onclick="document.getElementById('qrisModal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">Tutup</button>
+    </div>
+</div>
+
+{% endblock %}
+{% block body %}
+{% include '_navbar_user.html' %}
+<main class="w-full md:max-w-3xl mx-auto px-4 py-6 pb-24 md:pb-10 space-y-6">
+
+  {% if pending %}
+  <div class="relative bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200/60 shadow-ink-900/10">
+    <div class="bg-[#115E59] text-white p-6 text-center">
+      <div class="text-[10px] uppercase tracking-widest text-teal-300 font-bold mb-1">Total Tagihan</div>
+      <div class="text-3xl font-bold tracking-tight">Rp {{ '{:,.0f}'.format(pending.amount).replace(',', '.') }}</div>
+    </div>
+
+    <div class="bg-white relative flex flex-col items-center justify-center py-6 px-4">
+        <div class="w-full max-w-[280px] bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-[#115E59] flex flex-col items-center shadow-sm">
+            <div class="w-full bg-[#115E59] text-white text-[11px] font-bold py-1.5 mb-4 text-center shadow-md rounded-lg uppercase tracking-widest flex items-center justify-center gap-2">
+                <span class="animate-pulse h-2 w-2 bg-teal-300 rounded-full"></span> QRIS OTOMATIS
+            </div>
+            <div id="qrisMurni" class="w-[250px] h-[250px] border border-slate-200 p-0 bg-black rounded-xl shadow-sm overflow-hidden flex items-center justify-center">
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium mt-4 text-center leading-relaxed">Scan barcode ini menggunakan aplikasi<br>E-Wallet atau M-Banking Anda.</p>
+        </div>
+    </div>
+    <div class="p-5 bg-slate-50/50 border-t-2 border-slate-200 border-dashed relative">
+      <div class="absolute -top-3 -left-3 w-6 h-6 bg-slate-50/50 rounded-full border-b-2 border-r-2 border-slate-200 rotate-45 hidden sm:block"></div>
+      <div class="absolute -top-3 -right-3 w-6 h-6 bg-slate-50/50 rounded-full border-b-2 border-l-2 border-slate-200 -rotate-45 hidden sm:block"></div>
+
+      <div class="flex items-center justify-between mb-4">
+          <div>
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Order ID</div>
+              <div class="text-[#115E59] font-mono text-xs font-bold">{{ pending.order_id }}</div>
+          </div>
+          <div class="text-right">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Batas Waktu</div>
+              <div id="countdown" class="text-rose-600 font-mono text-base font-bold">10:00</div>
+          </div>
+      </div>
+      
+      <div id="qStatus" class="flex items-center justify-center gap-2 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl py-2 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+        Menunggu Pembayaran...
+      </div>
+
+      <button id="cancelBtn" class="w-full rounded-xl border-2 border-rose-100 bg-white text-rose-600 py-2.5 text-sm font-bold transition pointer-events-auto">Batalkan Transaksi</button>
+    </div>
+  </div>
+  {% else %}
+  <div id="mainTopupBox" class="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-sm">
+    <h1 class="text-xl font-bold text-[#115E59]">Top Up Saldo</h1>
+    <div class="grid grid-cols-2 gap-2">
+      {% for n in [10000, 50000, 100000, 250000, 500000, 1000000] %}
+        <button type="button" data-n="{{ n }}" class="quick-btn rounded-xl border-2 border-slate-100 py-3 text-sm font-bold text-[#165654] transition active:scale-95">Rp {{ '{:,.0f}'.format(n).replace(',', '.') }}</button>
+      {% endfor %}
+    </div>
+    <div class="relative">
+        <span class="absolute left-4 top-3.5 text-slate-500 font-bold text-sm">Rp</span>
+        <input id="amount" type="number" placeholder="Atau ketik manual..." class="w-full bg-slate-50/50 border-2 border-slate-100 rounded-xl pl-10 pr-4 py-3.5 text-sm font-bold focus:border-[#115E59] outline-none" />
+    </div>
+    <div class="space-y-3 mt-2">
+        {% if auto_qris_on %}
+        <button id="createBtn" class="w-full rounded-2xl bg-white border-2 border-[#115E59] text-[#115E59] py-3.5 font-bold shadow-sm active:scale-95">Top Up QRIS (Otomatis)</button>
+        {% endif %}
+        <button id="manualBtn" class="w-full rounded-2xl bg-[#115E59] text-white py-3.5 font-bold shadow-lg active:scale-95">Top Up Manual (Bebas Admin)</button>
+    </div>
+  </div>
+
+  <div id="manualBox" class="hidden bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-sm">
+      <div class="text-center">
+          <h2 class="text-xl font-bold text-slate-800">Transfer Manual</h2>
+          <p class="text-xs text-slate-500 mt-1">Scan QRIS di bawah. <b class="text-teal-600">Nominal otomatis terisi</b> secara sistem.</p>
+      </div>
+      <div class="bg-[#115E59] text-white p-5 rounded-2xl text-center shadow-inner">
+          <div class="text-[10px] uppercase tracking-widest text-teal-300 font-bold mb-1">Total Transfer</div>
+          <div id="manualTotalText" class="text-3xl font-bold tracking-tight">Rp 0</div>
+      </div>
+      <div class="space-y-3">
+          <div class="p-4 border border-slate-200 rounded-2xl bg-slate-50 text-center shadow-sm">
+              <div class="text-xs text-slate-500 mb-2 font-semibold">Metode Pembayaran QRIS:</div>
+              
+              <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+              
+              <div class="bg-white border-2 border-[#115E59] rounded-xl p-4 shadow-sm mb-3 flex flex-col items-center justify-center">
+                  <div class="text-[10px] uppercase tracking-widest text-teal-600 font-bold mb-2">SCAN QRIS SHOPEE (NOMINAL TERKUNCI)</div>
+                  <div id="qrisCanvas" class="bg-white p-2 rounded-lg mix-blend-multiply"></div>
+                  <div class="text-[10px] text-teal-600 font-bold text-center mt-2 animate-pulse">*Nominal otomatis terkunci, pastikan tujuan atas nama Ansor Store</div>
+              </div>
+              
+              
+              
+          </div>
+      </div>
+      <button id="confirmWaBtn" class="w-full rounded-2xl bg-[#25D366] text-white py-4 font-bold shadow-lg active:scale-95 flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 0C5.383 0 0 5.383 0 12.031c0 2.124.553 4.148 1.604 5.946L.141 23.859l6.02-1.579c1.748.956 3.71 1.46 5.87 1.46 6.648 0 12.031-5.383 12.031-12.031C24.062 5.383 18.679 0 12.031 0zm0 21.656c-1.802 0-3.567-.485-5.114-1.403l-.366-.217-3.797.996.996-3.797-.217-.366C2.615 15.321 2.13 13.556 2.13 11.754c0-5.468 4.447-9.915 9.901-9.915 5.468 0 9.915 4.447 9.915 9.915s-4.447 9.915-9.915 9.915zm5.438-7.432c-.298-.149-1.766-.872-2.04-.973-.274-.101-.473-.149-.672.149-.199.298-.769.973-.943 1.171-.174.199-.348.224-.647.075-2.008-.987-3.513-2.671-4.281-3.993-.11-.186-.01-.284.14-.433.133-.133.298-.348.448-.522.149-.174.199-.298.298-.498.099-.199.05-.373-.025-.522-.075-.149-.672-1.617-.92-2.214-.242-.582-.489-.504-.672-.513-.174-.01-.373-.01-.572-.01-.199 0-.522.075-.796.373-.274.298-1.045 1.021-1.045 2.488s1.07 2.886 1.219 3.085c.149.199 2.096 3.204 5.076 4.492.709.306 1.263.489 1.696.626.711.226 1.358.194 1.871.118.577-.085 1.766-.721 2.015-1.418.249-.697.249-1.294.174-1.418-.074-.124-.274-.199-.572-.348z"/></svg>
+          Konfirmasi via WhatsApp
+      </button>
+      <button id="backToTopup" class="w-full text-sm font-bold text-slate-500 py-2">Kembali</button>
+  </div>
+  {% endif %}
+</main>
+
+<div id="qrisModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
+        <h2 class="text-lg font-bold text-slate-800">Scan QRIS</h2>
+        <img id="qrisImage" src="" class="w-full h-auto my-4 border rounded-xl" alt="QRIS">
+        <button onclick="document.getElementById('qrisModal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">Tutup</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if pending %}
+  // [VAKSIN ANTI-AMNESIA] Menyimpan waktu kedaluwarsa di memori HP pembeli
+  let orderId = "{{ pending.order_id }}";
+
+  // === LOGIKA QRIS CERDAS & PRESISI (GARUDA TELL) ===
+  document.addEventListener("DOMContentLoaded", () => {
+      let targetDiv = document.getElementById('qrisMurni');
+      let rawData = "{{ pending.qris_data }}";
+
+      if (targetDiv && rawData) {
+          // MEMAKSA KOTAK MEMBERIKAN JARAK AMAN (PADDING p-4)
+          targetDiv.className = "w-[240px] h-[240px] bg-white border border-slate-200 rounded-2xl shadow-sm flex items-center justify-center p-4";
+
+          // 1. Jika ini link Checkout dari PaymentKita (TERNYATA INI GAMBAR PNG LANGSUNG!)
+          if (rawData.startsWith('http')) {
+              if (rawData.includes('pakasir.com')) {
+                  // Tombol Aksi Pakasir (Aman & Rapi)
+                  targetDiv.className = "w-full max-w-[240px] bg-slate-50 border border-slate-200 rounded-2xl shadow-inner flex flex-col items-center justify-center p-5 gap-2";
+                  targetDiv.innerHTML = `
+                    <svg class="w-12 h-12 text-[#115E59] mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                    <div class="text-[11px] text-slate-500 text-center font-semibold mb-2">Lanjutkan via Halaman Resmi</div>
+                    <a href="${rawData}" class="w-full bg-[#115E59] text-white text-center font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-transform hover:bg-[#0f4d49]">Buka Pakasir</a>
+                  `;
+              } else {
+                  // Jika PaymentKita, tetap render sebagai gambar
+                  let finalLink = rawData.replace('/payment/', '/qr/');
+                  targetDiv.innerHTML = `<img src="${finalLink}" class="w-full h-full object-contain rounded-xl">`;
+              }
+          } 
+          // 2. Jika kode String QRIS Asli (000201...)
+          else if (rawData.startsWith('000201')) {
+              targetDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=0&data=${encodeURIComponent(rawData)}" class="w-full h-full object-contain rounded-xl">`;
+          } 
+          // 3. Jika Gambar Base64 dari Pakasir
+          else if (rawData.length > 50) {
+              targetDiv.innerHTML = `<img src="data:image/png;base64,${rawData}" class="w-full h-full object-contain rounded-xl">`;
+          }
+      }
+  });
+  // ==================================================
+
+  let savedExpiry = localStorage.getItem("expiry_" + orderId);
+  let timeLeft;
+  
+  if (savedExpiry) {
+      // Jika sudah pernah buka, hitung sisa waktu dari memori
+      timeLeft = Math.floor((parseInt(savedExpiry) - Date.now()) / 1000);
+  } else {
+      // Jika baru pertama kali buka, set 10 menit (600 detik) dan simpan ke memori
+      timeLeft = {{ pending.expires_in|default(600) }};
+      localStorage.setItem("expiry_" + orderId, Date.now() + (timeLeft * 1000));
+  }
+  const timer = setInterval(() => {
+    if (timeLeft <= 0) { clearInterval(timer); location.reload(); }
+    timeLeft--;
+    document.getElementById('countdown').textContent = `${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')}`;
+  }, 1000);
+
+  setInterval(async () => {
+    try {
+        const r = await fetch(`/topup/status/{{ pending.order_id }}`);
+        const b = await r.json();
+        if (b.status === 'paid') {
+            await Swal.fire({icon:'success', title:'Pembayaran Berhasil!'});
+            location.href='/dashboard';
+        }
+    } catch(e){}
+  }, 4000);
+
+  document.getElementById('cancelBtn').addEventListener('click', async () => {
+    await fetch('/topup/cancel', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({order_id:"{{ pending.order_id }}"})});
+    location.reload();
+  });
+{% else %}
+  document.querySelectorAll('.quick-btn').forEach(b => {
+    b.addEventListener('click', () => { document.getElementById('amount').value = b.dataset.n; });
+  });
+
+  // LOGIKA TOP UP MANUAL BEBAS ADMIN
+  let finalManualTotal = 0;
+  document.getElementById('manualBtn').addEventListener('click', () => {
+      const amt = parseInt(document.getElementById('amount').value);
+      if(!amt || amt < 1000) {
+          return Swal.fire({icon: 'warning', title: 'Minimal Rp 1.000'});
+      }
+      if(amt > 1000000) {
+          return Swal.fire({icon: 'warning', title: 'Maksimal Rp 1.000.000'});
+      }
+      
+      // Bikin angka unik acak dari 1 sampai 999
+      const unique = Math.floor(Math.random() * 999) + 1;
+      finalManualTotal = amt + unique;
+
+      // 1. Ganti tampilan ke loading screen
+      document.getElementById('manualTotalText').textContent = 'Rp ' + finalManualTotal.toLocaleString('id-ID');
+      document.getElementById('mainTopupBox').classList.add('hidden');
+      document.getElementById('manualBox').classList.remove('hidden');
+      
+      // Bersihkan kanvas lama (jika ada) dan tampilkan loading
+      const canvasContainer = document.getElementById('qrisCanvas');
+      canvasContainer.innerHTML = '<div class="text-sm text-slate-400">Merakit QRIS Dinamis...</div>';
+      document.getElementById('confirmWaBtn').disabled = true;
+      document.getElementById('confirmWaBtn').classList.add('opacity-50', 'cursor-not-allowed');
+
+      // 2. Panggil API Terowongan Rahasia
+      fetch('/api/qris-dinamis', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({amount: finalManualTotal})
+      })
+      .then(r => r.json())
+      .then(res => {
+          canvasContainer.innerHTML = ''; // Bersihkan tulisan loading
+          if (res.ok && res.qris_string) {
+              // 3. Lukis Barcode QRIS-nya!
+              new QRCode(canvasContainer, {
+                  text: res.qris_string,
+                  width: 220,
+                  height: 220,
+                  colorDark : "{{ current_user.theme_color or '#115E59' }}", // Warna hijau tua Garuda Tell
+                  colorLight : "#ffffff",
+                  correctLevel : QRCode.CorrectLevel.M
+              });
+              
+              // Buka gembok tombol WA
+              document.getElementById('confirmWaBtn').disabled = false;
+              document.getElementById('confirmWaBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+          } else {
+              canvasContainer.innerHTML = '<div class="text-sm text-rose-500 font-bold">Gagal memuat QRIS. Hubungi Admin.</div>';
+          }
+      })
+      .catch(err => {
+          canvasContainer.innerHTML = '<div class="text-sm text-rose-500 font-bold">Koneksi terputus.</div>';
+      });
+  });
+
+  document.getElementById('backToTopup').addEventListener('click', () => {
+      document.getElementById('manualBox').classList.add('hidden');
+      document.getElementById('mainTopupBox').classList.remove('hidden');
+  });
+
+  // TOMBOL WHATSAPP OTOMATIS
+  document.getElementById('confirmWaBtn').addEventListener('click', () => {
+      const text = `*HALO ADMIN {{ (current_user.store_name or 'GARUDA TELL') | upper }}!* 🦅🔥%0ASaya mau konfirmasi deposit saldo nih:%0A%0A• Nominal Scan: *Rp ${finalManualTotal.toLocaleString('id-ID')}*%0A• Pembayaran: *QRIS (Ansor Store)*%0A• Status: *Lunas!* ✅%0A%0ABukti transfernya sudah saya lampirkan di bawah ya. Ditunggu saldonya masuk, Min! Sukses selalu! 🚀`;
+      window.open(`https://wa.me/6281775700114?text=${text}`, '_blank');
+  });
+
+  // LOGIKA PAKASIR (Hanya aktif jika Saklar di-ON-kan)
+  const createBtn = document.getElementById('createBtn');
+  if(createBtn) {
+      createBtn.addEventListener('click', async () => {
+        const amount = document.getElementById('amount').value;
+        if(!amount || amount < 1000) return Swal.fire({icon: 'warning', title: 'Minimal Rp 1.000'});
+        if(amount > 250000) return Swal.fire({icon: 'warning', title: 'Maksimal Rp 250.000'});
+        Swal.fire({title: 'Menyiapkan QRIS...', didOpen: () => Swal.showLoading()});
+        try {
+            const r = await fetch('/topup/create', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({amount: parseInt(amount)})});
+            const res = await r.json();
+            if (res.ok) {
+                let qData = res.qris_data || "";
+                let linkPembayaran = res.payment_url || "";
+                
+                // Jika dari PaymentKita (String Murni 000201)
+                if (qData.startsWith('000201') || qData.startsWith('http')) {
+                    document.getElementById('qrisImage').src = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=10&data=" + encodeURIComponent(qData);
+                    Swal.fire({icon: 'success', title: 'Berhasil', text: 'Menyiapkan Tagihan...', timer: 1000, showConfirmButton: false}).then(() => { window.location.reload(); });
+                } 
+                // Jika Gambar dari Pakasir
+                else if (qData.length > 100 && !qData.startsWith('http')) {
+                    document.getElementById('qrisImage').src = 'data:image/png;base64,' + qData;
+                    Swal.fire({icon: 'success', title: 'Berhasil', text: 'Menyiapkan Tagihan...', timer: 1000, showConfirmButton: false}).then(() => { window.location.reload(); });
+                } 
+                // Jika hanya Link Darurat
+                else {
+                    let link = linkPembayaran.startsWith('http') ? linkPembayaran : (qData.startsWith('http') ? qData : null);
+                    if (link) {
+                        Swal.fire({icon: 'success', title: 'Berhasil', text: 'Invoice dibuat...', timer: 1000, showConfirmButton: false}).then(() => { window.location.reload(); });
+                    } else {
+                        Swal.fire({icon: 'error', title: 'Gagal', text: 'Format QRIS tidak dikenali.'});
+                    }
+                }
+            } else {
+                Swal.fire({icon: 'error', title: 'Gagal', text: res.error || 'Gagal memproses tagihan.'});
+            }
+        } catch (error) {
+            Swal.fire({icon: 'error', title: 'Terputus', text: 'Koneksi jaringan gagal. Silakan coba lagi.'});
+        }
+      });
+  }
+{% endif %}
+</script>
+
+<div id="qrisModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
+        <h2 class="text-lg font-bold text-slate-800">Scan QRIS</h2>
+        <img id="qrisImage" src="" class="w-full h-auto my-4 border rounded-xl" alt="QRIS">
+        <button onclick="document.getElementById('qrisModal').classList.add('hidden')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">Tutup</button>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,30 @@
+<nav class="sticky top-0 z-40 bg-white border-b border-slate-200">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-2.5 font-semibold">
+      <span class="w-8 h-8 rounded-xl bg-[#115E59] grid place-items-center text-white text-xs font-bold">A</span>
+      <span class="text-[#115E59] tracking-tight">{{ APP_NAME }} <span class="text-slate-500 font-normal">/ Admin</span></span>
+    </a>
+    <div class="hidden md:flex items-center gap-1 text-sm">
+      <a href="{{ url_for('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-[#115E59] hover:bg-slate-50/50 font-medium">Dashboard</a>
+      <a href="{{ url_for('admin.products') }}" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-[#115E59] hover:bg-slate-50/50 font-medium">Produk</a>
+      <a href="{{ url_for('admin.pricelist') }}" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-[#115E59] hover:bg-slate-50/50 font-medium">Auto-Pull</a>
+      <a href="{{ url_for('admin.users') }}" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-[#115E59] hover:bg-slate-50/50 font-medium">Users</a>
+      <a href="{{ url_for('admin.transactions') }}" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-[#115E59] hover:bg-slate-50/50 font-medium">Transaksi</a>
+      <a href="{{ url_for('admin.logs') }}" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-[#115E59] hover:bg-slate-50/50 font-medium">Logs</a>
+    </div>
+    <form method="POST" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#115E59] to-[#0D9488] hover:opacity-90 shadow-md text-white text-xs font-semibold transition">Keluar</button>
+    </form>
+  </div>
+  <div class="md:hidden border-t border-slate-200 overflow-x-auto scrollbar-none bg-slate-50/50">
+    <div class="flex gap-1 px-3 py-2 text-xs whitespace-nowrap">
+      <a href="{{ url_for('admin.dashboard') }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-medium">Dashboard</a>
+      <a href="{{ url_for('admin.products') }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-medium">Produk</a>
+      <a href="{{ url_for('admin.pricelist') }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-medium">Auto-Pull</a>
+      <a href="{{ url_for('admin.users') }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-medium">Users</a>
+      <a href="{{ url_for('admin.transactions') }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-medium">Transaksi</a>
+      <a href="{{ url_for('admin.logs') }}" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 font-medium">Logs</a>
+    </div>
+  </div>
+</nav>

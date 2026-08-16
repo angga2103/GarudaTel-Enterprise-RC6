@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Deposit Master · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">💳 Deposit Master</h1>
+            <p class="text-sm text-gray-500 mt-1">Isi saldo pusat via Digiflazz (Hanya ShopeePay)</p>
+        </div>
+        <a href="/admin/" class="px-4 py-2 bg-white border border-gray-200 text-gray-900 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-sm">⬅ Kembali</a>
+    </div>
+
+    
+    <div class="mb-6 p-6 bg-gradient-to-r from-[#115E59] to-[#0D9488] rounded-[24px] shadow-lg text-white flex justify-between items-center relative overflow-hidden">
+        <div class="absolute -right-4 -top-4 opacity-10">
+            <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.64-2.25 1.64-1.74 0-2.1-.96-2.15-1.71H8.04c.06 1.36 1.03 2.64 2.86 3v1.7h2.2V17.5c1.55-.33 2.86-1.3 2.86-2.92 0-1.85-1.5-2.74-3.65-3.26z"/></svg>
+        </div>
+        <div class="relative z-10">
+            <div class="text-[10px] font-black uppercase tracking-widest text-teal-200 mb-1">Saldo Pusat (Digiflazz)</div>
+            <div class="text-4xl font-black tracking-tighter" id="teksSaldo">Rp <span class="animate-pulse">...</span></div>
+        </div>
+        <button onclick="cekSaldoDigiflazz()" class="relative z-10 bg-white/20 hover:bg-white/30 px-4 py-2.5 rounded-xl text-sm font-bold backdrop-blur-sm border border-white/30 transition-all flex items-center gap-2 shadow-sm">
+            🔄 Cek Saldo
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <div class="p-6 bg-white border border-gray-200 rounded-[24px] shadow-sm h-fit">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Metode Pembayaran</label>
+                    <div class="w-full px-4 py-3 bg-orange-50 border border-orange-200 rounded-2xl text-orange-700 font-bold flex items-center justify-between">
+                        <span>ShopeePay (Auto)</span>
+                        <span class="text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full shadow-sm">ACTIVE</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Nominal Deposit</label>
+                    <input type="text" id="depoNominal" placeholder="Cth: 205.000" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-gray-900 outline-none transition-all font-bold text-gray-900 text-lg">
+                    <div class="text-[10px] text-gray-400 mt-1 ml-1">*Minimal Rp 50.000</div>
+                </div>
+                <button onclick="buatTiket()" class="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-gray-800 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Minta Tiket Sekarang
+                </button>
+            </div>
+
+            <div id="hasilTiket" class="mt-6 hidden"></div>
+        </div>
+
+        <div class="p-6 bg-white border border-gray-200 rounded-[24px] shadow-sm h-fit">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-lg font-bold text-gray-900">Riwayat Terakhir</h2>
+                
+            </div>
+
+            {% if riwayat %}
+                <div class="space-y-3">
+                {% for r in riwayat %}
+                    <div class="p-3 border border-gray-100 rounded-[16px] bg-gray-50 flex justify-between items-center hover:border-gray-300 transition-all">
+                        <div>
+                            <div class="text-sm font-bold text-gray-800">{{ r.bank }}</div>
+                            <div class="text-[10px] text-gray-500 font-medium mt-0.5">{{ r.tanggal }}</div>
+                        </div>
+                        <div class="text-right flex items-center gap-3">
+                            <div>
+                                <div class="text-sm font-black text-gray-800">Rp {{ "{:,.0f}".format(r.nominal).replace(',', '.') }}</div>
+                                {% if r.status == 'SUKSES' %}
+                                    <div class="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md uppercase mt-1 inline-block">SUKSES</div>
+                                {% else %}
+                                    <div class="text-[9px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md uppercase mt-1 inline-block animate-pulse">PENDING</div>
+                                {% endif %}
+                            </div>
+                            <div class="flex flex-col gap-1 border-l border-gray-200 pl-3 ml-1">
+                                <button onclick="updateRiwayat({{ loop.index0 }}, 'sukses')" class="w-7 h-7 bg-emerald-50 text-emerald-600 rounded-md flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors text-xs shadow-sm" title="Tandai Sukses">✅</button>
+                                <button onclick="updateRiwayat({{ loop.index0 }}, 'hapus')" class="w-7 h-7 bg-rose-50 text-rose-600 rounded-md flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors text-xs shadow-sm" title="Hapus Riwayat">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+                </div>
+                <div class="text-[10px] text-gray-400 mt-4 text-center">*Menampilkan 10 riwayat deposit terakhir.</div>
+            {% else %}
+                <div class="text-center text-gray-400 py-10 border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
+                    <div class="text-4xl mb-2 opacity-50">📭</div>
+                    <div class="font-bold">Belum Ada Riwayat</div>
+                    <div class="text-xs mt-1 text-gray-500">Tiket PENDING Anda akan tercatat di sini.</div>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+async function cekSaldoDigiflazz() {
+    let el = document.getElementById("teksSaldo");
+    el.innerHTML = 'Rp <span class="animate-pulse">...</span>';
+    try {
+        let req = await fetch('/admin/api/saldo-digiflazz');
+        let res = await req.json();
+        if (res.status === 'Sukses') {
+            el.innerHTML = "Rp " + res.saldo.toLocaleString('id-ID');
+        } else {
+            el.innerHTML = "<span class='text-sm text-rose-300 font-bold'>" + res.message + "</span>";
+        }
+    } catch (e) {
+        el.innerHTML = "<span class='text-sm text-rose-300 font-bold'>Gagal Terhubung</span>";
+    }
+}
+// Otomatis tarik saldo saat halaman deposit dibuka
+document.addEventListener("DOMContentLoaded", cekSaldoDigiflazz);
+
+async function buatTiket() {
+    let rawVal = document.getElementById("depoNominal").value;
+    let nominal = parseInt(rawVal.replace(/[^0-9]/g, ''));
+    let kotakHasil = document.getElementById("hasilTiket");
+
+    if (isNaN(nominal) || nominal < 50000) {
+        alert("Terbaca: Rp " + (nominal || 0) + "\nMinimal deposit adalah Rp 50.000!");
+        return;
+    }
+
+    kotakHasil.classList.remove("hidden");
+    kotakHasil.innerHTML = "<div class='text-center py-4 animate-pulse font-bold text-gray-500 bg-gray-50 rounded-[20px] border border-gray-200'>⏳ Sedang membuat tiket...</div>";
+
+    try {
+        let req = await fetch('/admin/api/tiket-deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nominal: nominal })
+        });
+        let res = await req.json();
+
+        if (res.status === 'success') {
+            let d = res.data;
+            kotakHasil.innerHTML = `
+                <div class="p-5 bg-white border-2 border-emerald-500 rounded-[24px] shadow-lg relative overflow-hidden">
+                    <div class="font-black text-emerald-600 mb-4 flex items-center justify-center gap-1.5 text-lg border-b border-gray-100 pb-3">
+                        <span>✅</span> TIKET BERHASIL DIBUAT!
+                    </div>
+                    
+                    <div class="space-y-3 mb-4 relative z-10">
+                        <div class="flex justify-between items-center border-b border-gray-50 pb-2">
+                            <span class="text-gray-400 text-[10px] font-black uppercase tracking-widest">Bank Tujuan</span>
+                            <span class="font-bold text-gray-800 bg-orange-50 text-orange-600 px-3 py-1 rounded-lg text-xs border border-orange-100">BCA (ShopeePay)</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-gray-50 pb-2">
+                            <span class="text-gray-400 text-[10px] font-black uppercase tracking-widest">No. Rekening</span>
+                            <div class="text-right">
+                                <span class="font-black text-blue-600 text-xl tracking-tight" style="user-select: all;">6042888890</span>
+                                <div class="text-[10px] text-gray-500 font-bold">A.n PT Digiflazz</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-rose-50 rounded-[16px] border border-rose-200 text-center shadow-inner mb-4">
+                        <div class="text-[10px] text-rose-500 font-black uppercase tracking-widest mb-1">TRANSFER TEPAT NOMINAL INI:</div>
+                        <div class="text-4xl font-black text-rose-600 tracking-tighter" style="user-select: all;">Rp ${d.amount.toLocaleString('id-ID')}</div>
+                    </div>
+                    
+                    <div class="text-xs text-amber-700 font-bold flex items-start gap-2 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                        <span class="text-lg">⚠️</span>
+                        <span class="leading-relaxed">Buka ShopeePay -> Transfer ke Bank -> Pilih BCA. Wajib transfer sampai <b>3 digit terakhir</b> agar saldo masuk otomatis.</span>
+                    </div>
+                    
+                    <button onclick="location.reload()" class="w-full mt-4 py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all text-sm shadow-md">
+                        Saya Mengerti, Masukkan ke Riwayat
+                    </button>
+                </div>
+            `;
+            document.getElementById("depoNominal").value = "";
+        } else {
+            kotakHasil.innerHTML = `<div class="text-rose-600 font-bold p-4 bg-rose-50 rounded-[20px] text-center border border-rose-200 shadow-sm mt-2">❌ Gagal: ${res.msg}</div>`;
+        }
+    } catch (e) {
+        kotakHasil.innerHTML = `<div class="text-rose-600 font-bold p-4 bg-rose-50 rounded-[20px] text-center border border-rose-200 shadow-sm mt-2">❌ Koneksi Terputus.</div>`;
+    }
+}
+
+async function updateRiwayat(idx, action) {
+    if(action === 'hapus' && !confirm("Yakin ingin membuang catatan riwayat ini?")) return;
+    try {
+        let req = await fetch('/admin/api/update-riwayat-depo', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({index: idx, action: action})
+        });
+        if(req.ok) location.reload();
+    } catch(e) { alert("Gagal memperbarui!"); }
+}
+
+</script>
+{% endblock %}

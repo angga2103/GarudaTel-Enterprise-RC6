@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}Pusat Informasi · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-100 shadow-sm">
+    <div class="w-full md:max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+        <a href="/dashboard" class="w-10 h-10 rounded-full flex items-center justify-center bg-slate-50 text-slate-600 hover:bg-slate-100 transition shadow-sm border border-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <div class="text-center">
+            <h1 class="text-[15px] font-black text-slate-800 tracking-tight">Pusat Informasi</h1>
+            <p class="text-[10px] text-slate-400 font-medium tracking-wide">Info Promo & Pemeliharaan</p>
+        </div>
+        <div class="w-10 h-10"></div> </div>
+</div>
+
+<main class="w-full md:max-w-3xl mx-auto px-4 py-6 pb-24 space-y-4">
+    {% if notifs %}
+        {% for n in notifs %}
+        {% set is_urgent = 'GANGGUAN' in n.title.upper() or 'MAINTENANCE' in n.title.upper() or 'OFF' in n.title.upper() %}
+        {% set is_promo = 'PROMO' in n.title.upper() or 'TURUN' in n.title.upper() or 'CASHBACK' in n.title.upper() %}
+        
+        <details class="group bg-white rounded-2xl shadow-soft border {{ 'border-rose-200 shadow-rose-100/50' if is_urgent else 'border-slate-100 hover:border-[#115E59]/30' }} overflow-hidden transition-all duration-300 relative">
+            <summary class="list-none p-4 cursor-pointer flex items-start gap-4 select-none outline-none">
+                <div class="shrink-0 mt-1">
+                    {% if is_urgent %}
+                        <div class="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 shadow-sm border border-rose-100">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                    {% elif is_promo %}
+                        <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 shadow-sm border border-amber-100">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                        </div>
+                    {% else %}
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-[#115E59] shadow-sm border border-emerald-100">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="flex-1 min-w-0 pr-2">
+                    <div class="flex items-center gap-2 mb-1.5">
+                        <span class="text-[10px] font-bold {{ 'text-rose-600' if is_urgent else 'text-slate-500' }} tracking-wide">{{ n.created_at[:16] }} WIB</span>
+                        {% if n.created_at[:10] == now_date %}
+                            <span class="bg-[#115E59]/10 text-[#115E59] text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse tracking-wider">NEW</span>
+                        {% endif %}
+                    </div>
+                    <h2 class="text-[13px] font-bold {{ 'text-rose-700' if is_urgent else 'text-slate-800' }} leading-snug break-words group-open:text-[#115E59] transition-colors">
+                        {{ n.title }}
+                    </h2>
+                </div>
+                
+                <div class="shrink-0 mt-3 text-slate-300 group-open:rotate-180 group-open:text-[#115E59] transition-transform duration-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+            </summary>
+            
+            <div class="px-5 pb-5 pt-2 ml-12 border-t {{ 'border-rose-50' if is_urgent else 'border-slate-50' }}">
+                <div class="markdown-content whitespace-pre-wrap text-[13px] {{ 'text-rose-800' if is_urgent else 'text-slate-600' }} leading-relaxed" data-raw="{{ n.message }}">
+                    {{ n.message }}
+                </div>
+            </div>
+        </details>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-20">
+            <div class="w-24 h-24 mx-auto bg-slate-50 rounded-full flex items-center justify-center mb-5 border-2 border-dashed border-slate-200">
+                <svg class="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+            </div>
+            <h3 class="text-base font-bold text-slate-800 mb-1">Informasi Kosong</h3>
+            <p class="text-xs text-slate-500">Belum ada pengumuman terbaru dari server.</p>
+        </div>
+    {% endif %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    document.querySelectorAll('.markdown-content').forEach(div => {
+        const rawText = div.getAttribute('data-raw');
+        div.innerHTML = marked.parse(rawText);
+    });
+</script>
+
+<style>
+    summary::-webkit-details-marker { display: none; }
+    .markdown-content strong { font-weight: 800; color: inherit; }
+    .markdown-content ul { list-style-type: disc; margin-left: 1.25rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .markdown-content p { margin-bottom: 0.75rem; }
+    .markdown-content p:last-child { margin-bottom: 0; }
+</style>
+{% endblock %}

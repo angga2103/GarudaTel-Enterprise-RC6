@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Transaksi · Admin{% endblock %}
+{% block body %}
+{% include '_navbar_admin.html' %}
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-semibold tracking-tight text-[#115E59]">Log Transaksi</h1>
+    <div class="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center w-full">
+    <div class="flex gap-1.5 text-xs flex-wrap">
+      {% for s in ['', 'success', 'pending', 'failed'] %}
+        <a href="?status={{ s }}&user={{ user_filter or '' }}" class="px-3 py-1.5 rounded-full font-medium transition {{ 'bg-[#115E59] text-white' if status_filter==s else 'bg-white border border-slate-200 text-slate-800 hover:border-[#115E59]' }}">{{ s or 'semua' }}</a>
+      {% endfor %}
+    </div>
+    <form method="GET" class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+      {% if status_filter %}
+      <input type="hidden" name="status" value="{{ status_filter }}">
+      {% endif %}
+      <input type="text" name="user" value="{{ user_filter or '' }}" placeholder="Cari username..." class="w-full sm:w-48 text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-[#115E59] focus:ring-1 focus:ring-[#115E59]">
+      <button type="submit" class="bg-[#115E59] text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-teal-800 transition shadow-sm">Cari</button>
+      {% if user_filter %}
+      <a href="?status={{ status_filter or '' }}" class="bg-rose-50 text-rose-600 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-rose-100 transition flex items-center shadow-sm">Reset</a>
+      {% endif %}
+    </form>
+  </div>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50/50 text-[11px] uppercase text-slate-600 tracking-wider"><tr>
+        <th class="text-left px-3 py-2.5 font-semibold">Order</th><th class="text-left px-3 py-2.5 font-semibold">User</th><th class="text-left px-3 py-2.5 font-semibold">Produk</th><th class="text-left px-3 py-2.5 font-semibold">Tujuan</th><th class="text-right px-3 py-2.5 font-semibold">Harga</th><th class="text-left px-3 py-2.5 font-semibold">SN / Token</th><th class="text-center px-3 py-2.5 font-semibold">Status</th><th class="text-left px-3 py-2.5 font-semibold">Waktu</th>
+      </tr></thead>
+      <tbody class="divide-y divide-ink-100">
+        {% for t in transactions %}
+          <tr class="hover:bg-slate-50/50/60"><td class="px-3 py-2.5 font-mono text-xs text-slate-800">{{ t.order_id }}</td><td class="px-3 py-2.5">{{ t.username or '—' }}</td><td class="px-3 py-2.5">{{ t.name }}</td><td class="px-3 py-2.5">{{ t.target }}</td><td class="px-3 py-2.5 text-right font-medium">Rp {{ '{:,.0f}'.format(t.price).replace(',', '.') }}</td><td class="px-3 py-2.5 font-mono text-xs text-slate-600 max-w-[200px] truncate" title="{{ t.sn }}">{{ t.sn or '—' }}</td>
+          <td class="px-3 py-2.5 text-center"><span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full {% if t.status=='success' %}bg-emerald-50 text-emerald-700{% elif t.status=='pending' %}bg-amber-50 text-amber-700{% else %}bg-rose-50 text-rose-700{% endif %}">{{ t.status }}</span></td>
+          <td class="px-3 py-2.5 text-xs text-slate-600">{{ t.created_at | wib }}</td><td class='px-4 py-3'>{% if t.status == 'pending' %}<button onclick='forceFail("{{ t.order_id }}")' class='bg-rose-600 text-white text-[9px] px-2 py-1 rounded font-bold shadow-sm hover:bg-rose-700 transition'>GAGALKAN</button>{% endif %}</td></tr>
+        {% else %}
+          <tr><td colspan="8" class="px-3 py-10 text-center text-slate-500">Tidak ada transaksi.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+function forceFail(oid) {
+    Swal.fire({
+        title: 'Yakin Batalkan?',
+        text: "Transaksi " + oid + " akan dipaksa GAGAL di sistem.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Gagalkan!',
+        cancelButtonText: 'Kembali'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({title: 'Memproses...', didOpen: () => Swal.showLoading()});
+            fetch("/admin/transactions/force-fail", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({order_id: oid})
+            })
+            .then(r => r.json())
+            .then(d => {
+                if(d.ok) {
+                    Swal.fire('Berhasil!', 'Status telah diubah jadi FAILED.', 'success')
+                    .then(() => location.reload());
+                } else {
+                    Swal.fire('Gagal!', d.error || 'Terjadi kesalahan', 'error');
+                }
+            }).catch(err => {
+                Swal.fire('Error!', 'Koneksi ke server terputus.', 'error');
+            });
+        }
+    });
+}
+</script>
+{% endblock %}
+

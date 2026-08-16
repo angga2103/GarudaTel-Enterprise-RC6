@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}Notification Center · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Notification Center</h1>
+                <p class="text-sm text-slate-600 mt-1">Enterprise notification management system</p>
+            </div>
+            <a href="/admin" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                ← Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+        <div class="bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Total Broadcasts</div>
+            <div id="stat-total" class="text-3xl font-black text-[#115E59]">0</div>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-green-600 font-semibold uppercase tracking-wider mb-2">Success Rate</div>
+            <div id="stat-success-rate" class="text-3xl font-black text-green-700">0%</div>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-2">Registered Devices</div>
+            <div id="stat-devices" class="text-3xl font-black text-amber-700">0</div>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-blue-600 font-semibold uppercase tracking-wider mb-2">Last Broadcast</div>
+            <div id="stat-last" class="text-sm font-bold text-blue-700">Never</div>
+        </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Menu</h2>
+        
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <a href="/admin/notification-center/broadcast" class="p-5 bg-gradient-to-br from-[#115E59] to-[#165654] text-white rounded-[20px] shadow-md hover:shadow-lg transition-all text-center group">
+                <div class="text-3xl mb-3">📢</div>
+                <div class="text-sm font-bold">Broadcast</div>
+                <div class="text-xs opacity-80 mt-1">Send Notification</div>
+            </a>
+
+            <a href="/admin/notification-center/queue" class="p-5 bg-white border border-slate-200 rounded-[20px] shadow-sm hover:shadow-md hover:border-[#115E59] transition-all text-center group">
+                <div class="text-3xl mb-3">⏳</div>
+                <div class="text-sm font-bold text-[#115E59]">Queue</div>
+                <div class="text-xs text-slate-500 mt-1">Pending Messages</div>
+            </a>
+
+            <a href="/admin/notification-center/history" class="p-5 bg-white border border-slate-200 rounded-[20px] shadow-sm hover:shadow-md hover:border-[#115E59] transition-all text-center group">
+                <div class="text-3xl mb-3">📜</div>
+                <div class="text-sm font-bold text-[#115E59]">History</div>
+                <div class="text-xs text-slate-500 mt-1">Past Broadcasts</div>
+            </a>
+
+            <a href="/admin/notification-center/statistics" class="p-5 bg-white border border-slate-200 rounded-[20px] shadow-sm hover:shadow-md hover:border-[#115E59] transition-all text-center group">
+                <div class="text-3xl mb-3">📊</div>
+                <div class="text-sm font-bold text-[#115E59]">Statistics</div>
+                <div class="text-xs text-slate-500 mt-1">Analytics</div>
+            </a>
+
+            <a href="/admin/notification-center/channels" class="p-5 bg-white border border-slate-200 rounded-[20px] shadow-sm hover:shadow-md hover:border-[#115E59] transition-all text-center group">
+                <div class="text-3xl mb-3">📡</div>
+                <div class="text-sm font-bold text-[#115E59]">Channels</div>
+                <div class="text-xs text-slate-500 mt-1">Channel Status</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Channel Status -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Channel Status</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="channels-container">
+            <div class="text-center py-4 text-slate-500">Loading channels...</div>
+        </div>
+    </div>
+
+    <!-- Recent History -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Recent Broadcasts</h2>
+            <a href="/admin/notification-center/history" class="text-sm text-[#115E59] hover:underline font-semibold">View All →</a>
+        </div>
+        
+        <div id="recent-history" class="space-y-2">
+            <div class="text-center py-8 text-slate-500">Loading history...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadStatistics() {
+    try {
+        const res = await fetch('/admin/api/notification/statistics');
+        const data = await res.json();
+        
+        if (data.ok) {
+            document.getElementById('stat-total').textContent = data.stats.total_broadcasts || 0;
+            document.getElementById('stat-success-rate').textContent = (data.stats.success_rate || 0) + '%';
+            document.getElementById('stat-devices').textContent = data.stats.registered_devices || 0;
+            document.getElementById('stat-last').textContent = data.stats.last_broadcast || 'Never';
+        }
+    } catch (e) {
+        console.error('Failed to load statistics:', e);
+    }
+}
+
+async function loadChannels() {
+    try {
+        const res = await fetch('/admin/api/notification/channels');
+        const data = await res.json();
+        
+        if (data.ok && data.channels) {
+            const container = document.getElementById('channels-container');
+            container.innerHTML = '';
+            
+            for (const [name, info] of Object.entries(data.channels)) {
+                const statusClass = info.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500';
+                const statusIcon = info.active ? '🟢' : '⚪';
+                const statusText = info.active ? 'Online' : 'Coming Soon';
+                
+                container.innerHTML += `
+                    <div class="p-4 border border-slate-200 rounded-xl">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-lg font-bold text-slate-800 capitalize">${name}</div>
+                            <div class="text-xl">${statusIcon}</div>
+                        </div>
+                        <div class="text-xs ${statusClass} px-2 py-1 rounded-full inline-block font-semibold">
+                            ${statusText}
+                        </div>
+                        <div class="text-xs text-slate-500 mt-2">${info.type}</div>
+                    </div>
+                `;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load channels:', e);
+    }
+}
+
+async function loadRecentHistory() {
+    try {
+        const res = await fetch('/admin/api/notification/history?limit=5');
+        const data = await res.json();
+        
+        if (data.ok && data.history && data.history.length > 0) {
+            const container = document.getElementById('recent-history');
+            container.innerHTML = '';
+            
+            data.history.forEach(item => {
+                const statusClass = item.status === 'success' ? 'bg-green-100 text-green-700' : 
+                                   item.status === 'failed' ? 'bg-red-100 text-red-700' : 
+                                   item.status === 'sending' ? 'bg-blue-100 text-blue-700' :
+                                   'bg-amber-100 text-amber-700';
+                
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                        <div class="flex-1">
+                            <div class="font-semibold text-slate-800">${item.title}</div>
+                            <div class="text-xs text-slate-500 mt-1">
+                                ${item.created_at} · Target: ${item.target_type} · ${item.channels}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-sm">
+                                <span class="text-green-600 font-semibold">${item.success_count}</span> /
+                                <span class="text-red-600 font-semibold">${item.failed_count}</span>
+                            </div>
+                            <div class="px-2 py-1 ${statusClass} text-xs font-semibold rounded-full capitalize">
+                                ${item.status}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            document.getElementById('recent-history').innerHTML = 
+                '<div class="text-center py-8 text-slate-500">Belum ada broadcast</div>';
+        }
+    } catch (e) {
+        console.error('Failed to load history:', e);
+    }
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatistics();
+    loadChannels();
+    loadRecentHistory();
+});
+</script>
+{% endblock %}

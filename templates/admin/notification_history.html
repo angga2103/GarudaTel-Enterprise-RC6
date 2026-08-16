@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}Broadcast History · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Broadcast History</h1>
+                <p class="text-sm text-slate-600 mt-1">View past notification broadcasts</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="refreshHistory()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                    🔄 Refresh
+                </button>
+                <a href="/admin/notification-center" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                    ← Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-4 shadow-sm mb-6">
+        <div class="flex flex-wrap items-center gap-3">
+            <select id="filter-status" onchange="filterHistory()" class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#115E59]">
+                <option value="">All Status</option>
+                <option value="success">Success</option>
+                <option value="failed">Failed</option>
+                <option value="partial">Partial</option>
+                <option value="sending">Sending</option>
+                <option value="pending">Pending</option>
+            </select>
+
+            <select id="filter-target" onchange="filterHistory()" class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#115E59]">
+                <option value="">All Target</option>
+                <option value="all">All Users</option>
+                <option value="reseller">Reseller</option>
+                <option value="member">Member</option>
+                <option value="kasir">Kasir</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <select id="filter-channel" onchange="filterHistory()" class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-[#115E59]">
+                <option value="">All Channels</option>
+                <option value="firebase">Firebase</option>
+                <option value="whatsapp">WhatsApp</option>
+                <option value="telegram">Telegram</option>
+            </select>
+
+            <div class="ml-auto text-sm text-slate-600">
+                Total: <span id="total-count" class="font-bold text-slate-800">0</span> broadcasts
+            </div>
+        </div>
+    </div>
+
+    <!-- History List -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+        <div id="history-container" class="space-y-3">
+            <div class="text-center py-8 text-slate-500">Loading history...</div>
+        </div>
+
+        <!-- Load More -->
+        <div id="load-more-container" class="hidden mt-6 text-center">
+            <button onclick="loadMore()" class="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                Load More
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allHistory = [];
+let displayedCount = 20;
+
+async function loadHistory() {
+    try {
+        const res = await fetch('/admin/api/notification/history?limit=100');
+        const data = await res.json();
+        
+        if (data.ok) {
+            allHistory = data.history || [];
+            document.getElementById('total-count').textContent = allHistory.length;
+            renderHistory();
+        }
+    } catch (e) {
+        console.error('Failed to load history:', e);
+        document.getElementById('history-container').innerHTML = 
+            '<div class="text-center py-8 text-red-500">Failed to load history</div>';
+    }
+}
+
+function filterHistory() {
+    const statusFilter = document.getElementById('filter-status').value;
+    const targetFilter = document.getElementById('filter-target').value;
+    const channelFilter = document.getElementById('filter-channel').value;
+    
+    let filtered = allHistory;
+    
+    if (statusFilter) {
+        filtered = filtered.filter(h => h.status === statusFilter);
+    }
+    
+    if (targetFilter) {
+        filtered = filtered.filter(h => h.target_type === targetFilter);
+    }
+    
+    if (channelFilter) {
+        filtered = filtered.filter(h => h.channels.includes(channelFilter));
+    }
+    
+    document.getElementById('total-count').textContent = filtered.length;
+    renderHistory(filtered);
+}
+
+function renderHistory(data = null) {
+    const container = document.getElementById('history-container');
+    const history = data || allHistory;
+    
+    if (history.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-slate-500">Belum ada broadcast</div>';
+        document.getElementById('load-more-container').classList.add('hidden');
+        return;
+    }
+    
+    const toDisplay = history.slice(0, displayedCount);
+    
+    container.innerHTML = toDisplay.map(item => {
+        const statusClass = item.status === 'success' ? 'bg-green-100 text-green-700' : 
+                           item.status === 'failed' ? 'bg-red-100 text-red-700' : 
+                           item.status === 'sending' ? 'bg-blue-100 text-blue-700' :
+                           item.status === 'partial' ? 'bg-amber-100 text-amber-700' :
+                           'bg-slate-100 text-slate-700';
+        
+        const successRate = item.total_target > 0 ? 
+            Math.round((item.success_count / item.total_target) * 100) : 0;
+        
+        return `
+            <div class="p-5 border border-slate-200 rounded-xl hover:shadow-md transition-all">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <h3 class="font-bold text-slate-800 text-base mb-1">${item.title}</h3>
+                        <p class="text-sm text-slate-600 line-clamp-2">${item.message}</p>
+                    </div>
+                    <div class="px-3 py-1 ${statusClass} text-xs font-bold rounded-full ml-4 capitalize">
+                        ${item.status}
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 pt-4 border-t border-slate-100">
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Date</div>
+                        <div class="text-sm font-semibold text-slate-800">${item.created_at ? item.created_at.substring(0, 16).replace('T', ' ') : '-'}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Target</div>
+                        <div class="text-sm font-semibold text-slate-800 capitalize">${item.target_type}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Channel</div>
+                        <div class="text-sm font-semibold text-slate-800">${item.channels}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Recipients</div>
+                        <div class="text-sm font-semibold text-slate-800">${item.total_target}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-500 mb-1">Success Rate</div>
+                        <div class="text-sm font-semibold ${successRate >= 80 ? 'text-green-600' : successRate >= 50 ? 'text-amber-600' : 'text-red-600'}">
+                            ${successRate}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+                    <div class="text-sm">
+                        <span class="text-green-600 font-semibold">${item.success_count} Success</span>
+                    </div>
+                    <div class="text-sm">
+                        <span class="text-red-600 font-semibold">${item.failed_count} Failed</span>
+                    </div>
+                    ${item.sent_at ? `
+                    <div class="text-xs text-slate-500 ml-auto">
+                        Sent: ${item.sent_at.substring(0, 16).replace('T', ' ')}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Show/hide load more button
+    if (history.length > displayedCount) {
+        document.getElementById('load-more-container').classList.remove('hidden');
+    } else {
+        document.getElementById('load-more-container').classList.add('hidden');
+    }
+}
+
+function loadMore() {
+    displayedCount += 20;
+    renderHistory();
+}
+
+function refreshHistory() {
+    displayedCount = 20;
+    loadHistory();
+    
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'History refreshed',
+        showConfirmButton: false,
+        timer: 2000
+    });
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadHistory();
+});
+</script>
+{% endblock %}

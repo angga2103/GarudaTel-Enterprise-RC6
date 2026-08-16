@@ -1,0 +1,42 @@
+﻿# Secrets / environment
+.env
+.env.*
+!.env.example
+.env_backups/
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Database / runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary / backup files
+*.bak
+*.backup
+*.tmp
+
+# Project backup / obsolete copies
+*.bak.*
+*.backup.*
+*.rusak_*
+*.stable_*

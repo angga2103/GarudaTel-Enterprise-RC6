@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}Pengaturan Admin - {{ APP_NAME }}
+
+{% endblock %}
+
+{% block body %}
+<div class="min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white p-8 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-slate-100 relative overflow-hidden">
+        
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 translate-x-1/2 -translate-y-1/2"></div>
+        
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg transform rotate-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Keamanan Admin</h2>
+            <p class="text-sm text-slate-500 mt-1">Perbarui kata sandi Anda secara berkala.</p>
+        </div>
+
+        <div class="space-y-5">
+
+            <div class="flex items-center justify-between p-4 border border-rose-100 rounded-xl bg-rose-50/50 mb-6 shadow-sm relative overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1 bg-rose-500"></div>
+                <div class="pl-2">
+                    <h3 class="font-bold text-sm text-rose-900 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        Maintenance Mode
+                    </h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Kunci akses staf/kasir saat Anda mengupdate sistem.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="maintenance_toggle" class="sr-only peer" onchange="toggleAdminMaintenance()">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+                </label>
+            </div>
+
+
+            <div class="flex items-center justify-between p-4 border border-blue-100 rounded-xl bg-blue-50/50 mb-6 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-sm text-slate-800">Auto-Approve Pendaftar</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Jika aktif, pendaftar baru langsung bisa login tanpa izin Telegram.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="auto_approve_toggle" class="sr-only peer" onchange="toggleAutoApprove()">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+            
+            <div class="flex items-center justify-between p-4 border border-teal-100 rounded-xl bg-teal-50/50 mb-6 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-sm text-[#115E59]">Sistem Pakasir (QRIS)</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Aktifkan agar Agen bisa Top Up Otomatis (potong biaya admin).</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="pakasir_toggle" class="sr-only peer" onchange="togglePakasir()">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#115E59]"></div>
+                </label>
+            </div>
+
+            <div class="flex items-center justify-between p-4 border border-indigo-100 rounded-xl bg-indigo-50/50 mb-6 shadow-sm">
+                <div>
+                    <h3 class="font-bold text-sm text-indigo-900">PaymentKita (QRIS)</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Aktifkan Gateway Cadangan (Realtime).</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="paymentkita_toggle" class="sr-only peer" onchange="togglePaymentKita()">
+                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+            </div>
+
+            
+            <div class="flex flex-col p-4 border border-blue-100 rounded-xl bg-blue-50/50 mb-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-blue-900">Auto-Backup ke Telegram 🚀</h3>
+                        <p class="text-[11px] text-slate-500 mt-0.5">Kirim data & kode web otomatis ke Bot Telegram.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="backup_toggle" class="sr-only peer" onchange="updateBackupSettings()">
+                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                <div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-blue-100">
+                    <span class="text-xs font-bold text-slate-600">Backup Tiap:</span>
+                    <input type="number" id="backup_interval" class="w-16 border border-slate-200 rounded-md px-2 py-1.5 text-center text-sm font-bold text-blue-700 focus:outline-none focus:border-blue-500" value="2" min="1">
+                    <span class="text-xs font-bold text-slate-600">Jam</span>
+                    <button onclick="updateBackupSettings()" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold transition">Simpan Jadwal</button>
+                </div>
+                <div class="mt-3">
+                    <button onclick="testBackupSekarang()" class="w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                        Test Kirim Backup Sekarang
+                    </button>
+                </div>
+            </div>
+            <hr class="border-slate-100 mb-6">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Password Lama</label>
+                <div class="relative flex items-center">
+                    <input type="password" id="old_pass" class="w-full border-2 border-slate-100 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:border-slate-900 focus:ring-0 transition-colors bg-slate-50 focus:bg-white" placeholder="••••••••">
+                    <button type="button" onclick="togglePass('old_pass')" class="absolute right-0 mr-3 text-slate-400 hover:text-slate-700 focus:outline-none p-2 rounded-full hover:bg-slate-100 transition-colors">
+                        <svg id="icon_old_pass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Password Baru</label>
+                <div class="relative flex items-center">
+                    <input type="password" id="new_pass" class="w-full border-2 border-slate-100 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:border-slate-900 focus:ring-0 transition-colors bg-slate-50 focus:bg-white" placeholder="Minimal 6 Karakter">
+                    <button type="button" onclick="togglePass('new_pass')" class="absolute right-0 mr-3 text-slate-400 hover:text-slate-700 focus:outline-none p-2 rounded-full hover:bg-slate-100 transition-colors">
+                        <svg id="icon_new_pass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">Ulangi Password Baru</label>
+                <div class="relative flex items-center">
+                    <input type="password" id="confirm_pass" class="w-full border-2 border-slate-100 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:border-slate-900 focus:ring-0 transition-colors bg-slate-50 focus:bg-white" placeholder="Ketik ulang password baru">
+                    <button type="button" onclick="togglePass('confirm_pass')" class="absolute right-0 mr-3 text-slate-400 hover:text-slate-700 focus:outline-none p-2 rounded-full hover:bg-slate-100 transition-colors">
+                        <svg id="icon_confirm_pass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <button onclick="savePassword()" class="w-full bg-slate-900 text-white rounded-xl py-3.5 text-sm font-bold mt-4 hover:bg-slate-800 active:scale-[0.98] transition-all shadow-md">
+                Simpan Password Baru
+            </button>
+        </div>
+        
+        <div class="mt-8 text-center">
+            <a href="/admin" class="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">← Kembali ke Dashboard Admin</a>
+        </div>
+    </div>
+</div>
+
+<script>
+
+// FETCH SETTINGS
+window.addEventListener('load', async () => {
+    try {
+        const res = await fetch('/admin/api/settings');
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('auto_approve_toggle').checked = data.auto_approve;
+        }
+    } catch(e) {}
+});
+
+// TOGGLE SAKLAR
+async function toggleAutoApprove() {
+    const isChecked = document.getElementById('auto_approve_toggle').checked;
+    try {
+        const res = await postJSON('/admin/api/settings/toggle', {auto_approve: isChecked});
+        if(res.ok) {
+            Swal.fire({icon: 'success', title: 'Berhasil', text: isChecked ? 'Auto-Approve Aktif!' : 'Auto-Approve Dimatikan!', timer: 1500, showConfirmButton: false});
+        } else {
+            document.getElementById('auto_approve_toggle').checked = !isChecked;
+        }
+    } catch(e) {
+        document.getElementById('auto_approve_toggle').checked = !isChecked;
+    }
+}
+
+
+async function togglePaymentKita() {
+    const isChecked = document.getElementById('paymentkita_toggle').checked;
+    try {
+        const res = await postJSON('/admin/api/settings/toggle', {paymentkita_enabled: isChecked});
+        if(res.ok) {
+            Swal.fire({icon: 'success', title: 'Berhasil', text: isChecked ? 'PaymentKita Aktif!' : 'PaymentKita Dimatikan!', timer: 1500, showConfirmButton: false});
+        } else {
+            document.getElementById('paymentkita_toggle').checked = !isChecked;
+        }
+    } catch(e) {
+        document.getElementById('paymentkita_toggle').checked = !isChecked;
+    }
+}
+
+async function togglePakasir() {
+    const isChecked = document.getElementById('pakasir_toggle').checked;
+    try {
+        // Menggunakan postJSON agar tembus sistem keamanan server Bos
+        const res = await postJSON('/admin/api/settings/toggle', {pakasir_enabled: isChecked});
+        if(res.ok) {
+            Swal.fire({icon: 'success', title: 'Berhasil', text: isChecked ? 'Sistem Pakasir Aktif!' : 'Sistem Pakasir Dimatikan!', timer: 1500, showConfirmButton: false});
+        } else {
+            // Jika gagal simpan, kembalikan posisi saklar
+            document.getElementById('pakasir_toggle').checked = !isChecked;
+        }
+    } catch(e) {
+        document.getElementById('pakasir_toggle').checked = !isChecked;
+    }
+}
+
+// Fungsi wajib untuk mengingat posisi saklar saat di-refresh
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const r = await fetch('/admin/api/settings');
+        const data = await r.json();
+        const pk_el = document.getElementById('paymentkita_toggle'); if(pk_el && data.paymentkita_enabled) pk_el.checked = true;
+        if(data.pakasir_enabled) document.getElementById('pakasir_toggle').checked = true;
+        if(data.backup_enabled) document.getElementById('backup_toggle').checked = true;
+        if(data.backup_interval) document.getElementById('backup_interval').value = data.backup_interval;
+        if(data.auto_approve) document.getElementById('auto_approve_toggle').checked = true;
+    } catch(e) {}
+});
+
+
+
+  // FUNGSI MAINTENANCE ADMIN
+  async function toggleAdminMaintenance() {
+      const isChecked = document.getElementById('maintenance_toggle').checked;
+      try {
+          const res = await fetch('/admin/api/maintenance/toggle', {method: 'POST'});
+          const data = await res.json();
+          Swal.fire({
+              icon: data.status === 'on' ? 'warning' : 'success',
+              title: data.status === 'on' ? 'Sistem Terkunci!' : 'Sistem Dibuka!',
+              text: data.msg,
+              timer: 2000,
+              showConfirmButton: false
+          });
+      } catch(e) {
+          document.getElementById('maintenance_toggle').checked = !isChecked;
+          Swal.fire('Error', 'Gagal menghubungi server.', 'error');
+      }
+  }
+
+  // Load status maintenance saat direfresh
+  window.addEventListener('load', async () => {
+      try {
+          const res = await fetch('/admin/api/maintenance/toggle');
+          const data = await res.json();
+          document.getElementById('maintenance_toggle').checked = (data.status === 'on');
+      } catch(e) {}
+  });
+
+  // FUNGSI BACKUP TELEGRAM
+async function updateBackupSettings() {
+    const toggleEl = document.getElementById('backup_toggle');
+    const isEnabled = toggleEl ? toggleEl.checked : true;
+    const interval = document.getElementById('backup_interval').value || "2";
+    try {
+        const res = await postJSON('/admin/api/settings/toggle', {backup_enabled: isEnabled, backup_interval: interval});
+        if(res.ok) {
+            Swal.fire({icon: 'success', title: 'Jadwal Diperbarui!', text: isEnabled ? `Robot kirim backup tiap ${interval} jam.` : 'Auto-Backup Dimatikan.', timer: 2000, showConfirmButton: false});
+        }
+    } catch(e) {}
+}
+
+async function testBackupSekarang() {
+    Swal.fire({title: 'Memproses Backup...', text: 'Data sedang dipaketkan & dikirim ke Telegram (mungkin butuh 1-2 menit)...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+    try {
+        const res = await fetch('/admin/api/backup/test', {method: 'POST'});
+        if(res.ok) {
+            Swal.fire({icon: 'success', title: 'Proses Berjalan!', text: 'File sedang dikirim. Cek aplikasi Telegram Anda dalam 1 menit ke depan!'});
+        } else {
+            Swal.fire({icon: 'error', title: 'Gagal', text: 'Koneksi ke server bermasalah.'});
+        }
+    } catch(e) {
+        Swal.fire({icon: 'error', title: 'Error', text: 'Terjadi kesalahan sistem.'});
+    }
+}
+
+// FUNGSI UNTUK MENGINTIP PASSWORD
+function togglePass(id) {
+    const input = document.getElementById(id);
+    const icon = document.getElementById('icon_' + id);
+    if (input.type === 'password') {
+        input.type = 'text';
+        // Ubah SVG jadi mata dicoret (Tutup)
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>';
+    } else {
+        input.type = 'password';
+        // Kembalikan SVG jadi mata normal (Buka)
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+    }
+}
+
+async function savePassword() {
+    const oldp = document.getElementById('old_pass').value;
+    const newp = document.getElementById('new_pass').value;
+    const confp = document.getElementById('confirm_pass').value;
+
+    if(!oldp || !newp || !confp) return notifyError("Semua kolom wajib diisi!");
+    if(newp !== confp) return notifyError("Konfirmasi password tidak cocok!");
+    if(newp.length < 6) return notifyError("Password baru minimal 6 karakter.");
+
+    const btn = document.querySelector('button');
+    const oldText = btn.innerHTML;
+    btn.innerHTML = 'Memproses...'; btn.disabled = true;
+
+    try {
+        const res = await postJSON('/admin/api/change-password', {
+            old_password: oldp,
+            new_password: newp
+        });
+
+        if(res.body && res.body.status === 'success') {
+            Swal.fire({
+                icon: 'success', title: 'Aman Terkendali!', text: res.body.msg,
+                confirmButtonText: 'Tutup', allowOutsideClick: false
+            }).then(() => {
+                window.location.href = '/admin'; // Balik ke dashboard
+            });
+        } else {
+            notifyError((res.body && res.body.msg) ? res.body.msg : "Terjadi kesalahan.");
+        }
+    } catch(e) {
+        notifyError("Gagal menghubungi server.");
+    } finally {
+        btn.innerHTML = oldText; btn.disabled = false;
+    }
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    fetch('/admin/api/backup').then(r => r.json()).then(d => {
+        let inputJam = document.getElementById('backup_interval');
+        let saklarBackup = document.getElementById('backup_toggle');
+        
+        if(inputJam && d.backup_interval) {
+            inputJam.value = d.backup_interval;
+        }
+        if(saklarBackup && d.backup_enabled !== undefined) {
+            saklarBackup.checked = (d.backup_enabled === "1" || d.backup_enabled === true);
+        }
+    }).catch(e=>{});
+});
+</script>
+{% endblock %}

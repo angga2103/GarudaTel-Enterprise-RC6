@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% block title %}Belanja · {{ APP_NAME }}{% endblock %}
+{% block body %}
+{% include '_navbar_user.html' %}
+
+<main class="w-full md:max-w-3xl mx-auto bg-slate-50 min-h-screen pb-24 font-sans">
+  {# ─── HEADER PREMIUM TOSCA ─── #}
+  <div class="bg-[#115E59] px-5 pt-8 pb-8 rounded-b-[2.5rem] relative shadow-lg">
+    <div class="flex items-center gap-3 text-white mb-2 relative z-10">
+      {% if back_url %}
+      <a href="{% if 'Pascabayar' in request.path %}/dashboard{% else %}{{ back_url }}{% endif %}" class="hover:bg-white/20 p-2 rounded-full transition-all">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+      </a>
+      {% endif %}
+      <h1 class="text-xl font-bold tracking-wide">
+        {% if level == 'category' %}Belanja
+        {% elif level == 'brand' %}{{ category }}
+        {% elif level == 'type' %}{{ brand }}
+        {% else %}{{ brand }}{% endif %}
+      </h1>
+    </div>
+    <div class="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+  </div>
+
+  {# ─── PEMBUNGKUS KONTEN AGAR MELAYANG ─── #}
+  <div class="px-5 -mt-6 relative z-20">
+
+  {# ─── Level 1: CATEGORIES ─── #}
+
+  {% if level == 'category' %}
+    {% if categories %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {% for c in categories %}
+      <a href="{{ url_for('user.shop_brand', category=c.category) }}"
+         class="bg-white border border-slate-200 hover:border-[#115E59] rounded-2xl p-4 shadow-soft hover:shadow-lift transition flex flex-col items-start">
+        <div class="w-10 h-10 rounded-xl bg-slate-50/50 grid place-items-center mb-3">
+          <svg class="w-5 h-5 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/></svg>
+        </div>
+        <div class="font-semibold text-[#115E59] text-sm">{{ c.category }}</div>
+        <div class="text-[11px] text-slate-600 mt-0.5">{{ c.count }} produk</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}{% include 'user/_empty_shop.html' ignore missing %}
+    <div class="bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-600">
+      Belum ada produk. Admin perlu mengimpor produk dari halaman Auto-Pull.
+    </div>
+    {% endif %}
+
+  {# ─── Level 2: BRANDS ─── #}
+  {% elif level == 'brand' %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {% for b in brands %}
+      <a href="{{ url_for('user.shop_type', category=category, brand=b.brand) }}"
+         class="bg-white border border-slate-200 hover:border-[#115E59] rounded-2xl p-4 shadow-soft hover:shadow-lift transition">
+        <div class="font-semibold text-[#115E59] text-sm">{{ b.brand }}</div>
+        <div class="text-[11px] text-slate-600 mt-0.5">{{ b.count }} produk</div>
+      </a>
+      {% else %}
+      <div class="col-span-full bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-600">
+        Tidak ada brand pada kategori ini.
+      </div>
+      {% endfor %}
+    </div>
+
+  {# ─── Level 3: TYPES ─── #}
+  {% elif level == 'type' %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {% for t in types %}
+      <a href="{{ url_for('user.shop_products', category=category, brand=brand, type_=t.type) }}"
+         class="bg-white border border-slate-200 hover:border-[#115E59] rounded-2xl p-4 shadow-soft hover:shadow-lift transition flex items-center justify-between">
+        <div>
+          <div class="font-semibold text-[#115E59] text-sm capitalize">{{ t.type or 'prepaid' }}</div>
+          <div class="text-[11px] text-slate-600 mt-0.5">{{ t.count }} produk</div>
+        </div>
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+      </a>
+      {% else %}
+      <div class="col-span-full bg-white border border-slate-200 rounded-2xl p-8 text-center text-sm text-slate-600">
+        Tidak ada tipe produk untuk brand ini.
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ─── Level 4: PRODUCTS ─── #}
+  {% elif level == 'product' %}
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm mb-6 overflow-hidden">
+      
+      <div class="p-5 border-b border-slate-100">
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">ID Pelanggan</label>
+        <input id="target" type="text" inputmode="numeric" placeholder="Masukkan ID Pelanggan..." 
+               class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-base font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#115E59] focus:ring-1 focus:ring-[#115E59] transition-all" />
+      </div>
+      
+      <div class="p-5 bg-slate-50/30">
+        {% for p in products %}
+        {% if loop.first %}
+<button type="button" data-pid="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-sku="{{ p.sku }}" data-type="{{ p.type }}"
+                class="buy-btn w-full bg-[#115E59] text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-teal-700 transition active:scale-95 flex justify-center items-center gap-2">
+          <span>Cek Tagihan</span>
+        </button>
+        {% endif %}
+{% else %}
+        <div class="text-center text-sm text-slate-500 py-2">Produk tidak tersedia.</div>
+        {% endfor %}
+      </div>
+      
+    </div>
+  {% endif %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+{% if level == 'product' %}
+<script>
+  document.querySelectorAll('.buy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const target = document.getElementById('target').value.trim();
+      if (!target) { return notifyError('Nomor tujuan wajib diisi'); }
+      const pid = btn.dataset.pid, name = btn.dataset.name, price = parseInt(btn.dataset.price, 10);
+      const sku = btn.dataset.sku, type = btn.dataset.type;
+
+      if (type === 'postpaid') {
+          // --- ALUR PASCABAYAR (CEK TAGIHAN DULU) ---
+          Swal.fire({title: 'Mengecek Tagihan...', text: 'Mohon tunggu', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
+          
+          const resInq = await fetch('/api/inquiry', {
+              method: 'POST', headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({sku: sku, target: target})
+          });
+          const inqData = await resInq.json();
+          if(!inqData.ok) { 
+              return Swal.fire({
+              icon: 'warning', 
+              title: 'Pengecekan Gagal', 
+              html: `<div class="text-sm text-slate-800 mt-2 bg-rose-50 p-3 rounded-xl border border-rose-200">
+                        <b>Alasan dari Server:</b><br>
+                        <span class="text-rose-600 font-semibold">${inqData.error || 'Tagihan tidak ditemukan / sudah lunas'}</span>
+                     </div>`, 
+              confirmButtonText: 'Tutup',
+              confirmButtonColor: '#115E59'
+          }); 
+          }
+          
+          const step2 = await Swal.fire({
+              icon: 'info', title: 'Rincian Tagihan',
+              html: `<div class="text-sm text-slate-800 text-left bg-slate-50/50 p-4 rounded-xl mb-4">
+                      <div class="flex justify-between mb-2"><span>Pelanggan:</span> <b class="text-[#115E59]">${inqData.name}</b></div>
+                      <div class="flex justify-between mb-2"><span>Produk:</span> <b class="text-[#115E59]">${name}</b></div>
+                      <div class="flex justify-between border-t border-slate-200 pt-2 mt-2">
+                          <span>Total Bayar:</span> <b class="text-lg text-emerald-600">Rp ${inqData.amount.toLocaleString('id-ID')}</b>
+                      </div>
+                     </div>
+                     <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block text-left">PIN Transaksi</label>
+                     <input id="swal-pin" type="password" inputmode="numeric" class="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm text-center tracking-[1em] focus:outline-none focus:border-[#115E59] shadow-sm transition" placeholder="******">`,
+              showCancelButton: true, allowOutsideClick: false, confirmButtonText: 'Bayar Sekarang', cancelButtonText: 'Batal', confirmButtonColor: '#059669',
+              preConfirm: () => {
+                  const pin = document.getElementById('swal-pin').value;
+                  if(!pin) { Swal.showValidationMessage('PIN wajib diisi'); return false; }
+                  return { pin: pin, amount: inqData.amount };
+              }
+          });
+          
+          if(!step2.isConfirmed) return;
+          Swal.fire({title: 'Memproses Pembayaran...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+          
+          const resBuy = await postJSON('{{ url_for("user.buy") }}', { 
+              product_id: pid, target: target, pin: step2.value.pin, is_postpaid: true, amount: step2.value.amount 
+          });
+          
+          if(!resBuy.ok) return notifyError(resBuy.body.error || 'Pembayaran Gagal');
+          await Swal.fire({icon: 'success', title: 'Pembayaran Berhasil', html: `<div class="text-sm text-slate-600">Saldo Sisa: <b class="text-[#115E59]">Rp ${resBuy.body.balance.toLocaleString('id-ID')}</b></div>`});
+          location.href = '{{ url_for("user.history") }}';
+
+      } else {
+          // --- ALUR PRABAYAR (LANGSUNG BAYAR SEPERTI BIASA) ---
+          const ok = await Swal.fire({
+            title: 'Konfirmasi Pembelian',
+            html: `
+              <div class="text-sm text-slate-800 mb-4"><b>${name}</b><br>ke <b>${target}</b><br><br>Harga: <b class="text-[#115E59]">Rp ${price.toLocaleString('id-ID')}</b></div>
+              <div class="text-left mt-2 border-t border-slate-100 pt-4">
+                <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">PIN Transaksi</label>
+                <input id="swal-pin" type="password" inputmode="numeric" class="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm text-center tracking-[1em] focus:outline-none focus:border-[#115E59] shadow-sm transition" placeholder="******">
+              </div>
+            `,
+            showCancelButton: true, allowOutsideClick: false, confirmButtonText: 'Bayar Sekarang',
+            cancelButtonText: 'Batal', confirmButtonColor: '#115E59',
+            preConfirm: () => {
+              const pin = document.getElementById('swal-pin').value;
+              if (!pin) { Swal.showValidationMessage('PIN wajib diisi'); return false; }
+              return pin;
+            }
+          });
+          if (!ok.isConfirmed) return;
+          const pin = ok.value;
+          Swal.fire({title: 'Memproses…', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+          const res = await postJSON('{{ url_for("user.buy") }}', { product_id: pid, target: target, pin: pin });
+          if (!res.ok) return notifyError(res.body.error || 'Gagal');
+          if (res.body.status === 'success') {
+            await Swal.fire({icon: 'success', title: 'Transaksi Berhasil', html: `<div class="text-sm text-slate-600">SN: <b class="text-[#115E59]">${res.body.sn || '-'}</b><br>Saldo Sisa: <b class="text-[#115E59]">Rp ${res.body.balance.toLocaleString('id-ID')}</b></div>`});
+          } else {
+            await Swal.fire({icon: 'info', title: 'Sedang Diproses', text: 'Transaksi dalam antrian, cek halaman Riwayat.'});
+          }
+          location.href = '{{ url_for("user.history") }}';
+      }
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

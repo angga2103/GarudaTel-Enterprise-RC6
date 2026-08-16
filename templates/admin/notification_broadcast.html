@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}Broadcast Notification · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Broadcast Notification</h1>
+                <p class="text-sm text-slate-600 mt-1">Send notification to users</p>
+            </div>
+            <a href="/admin/notification-center" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                ← Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Broadcast Form -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+        <form id="broadcast-form" onsubmit="sendBroadcast(event)">
+            <!-- Title -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Title *</label>
+                <input type="text" id="broadcast-title" required class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#115E59] focus:ring-2 focus:ring-[#115E59]/20 transition-all" placeholder="Promo Spesial Hari Ini!">
+            </div>
+
+            <!-- Message -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Message *</label>
+                <textarea id="broadcast-message" required rows="5" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#115E59] focus:ring-2 focus:ring-[#115E59]/20 transition-all" placeholder="Dapatkan diskon hingga 50% untuk semua produk pulsa hari ini!"></textarea>
+                <div class="text-xs text-slate-500 mt-2">
+                    <span id="char-count">0</span> characters
+                </div>
+            </div>
+
+            <!-- Image URL (Placeholder) -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Image URL (Optional)</label>
+                <input type="url" id="broadcast-image" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#115E59] focus:ring-2 focus:ring-[#115E59]/20 transition-all" placeholder="https://example.com/image.jpg">
+                <div class="text-xs text-slate-500 mt-2">Coming soon: Image upload feature</div>
+            </div>
+
+            <!-- Target -->
+            <div class="mb-5">
+                <label class="block text-sm font-semibold text-slate-700 mb-3">Target Audience *</label>
+                <div class="space-y-2">
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input type="radio" name="target" value="all" checked class="w-4 h-4 text-[#115E59] focus:ring-[#115E59]">
+                        <span class="ml-3 text-sm font-semibold text-slate-700">Semua User</span>
+                        <span class="ml-auto text-xs text-slate-500" id="count-all">0 users</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input type="radio" name="target" value="reseller" class="w-4 h-4 text-[#115E59] focus:ring-[#115E59]">
+                        <span class="ml-3 text-sm font-semibold text-slate-700">Reseller</span>
+                        <span class="ml-auto text-xs text-slate-500" id="count-reseller">0 users</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input type="radio" name="target" value="member" class="w-4 h-4 text-[#115E59] focus:ring-[#115E59]">
+                        <span class="ml-3 text-sm font-semibold text-slate-700">Member</span>
+                        <span class="ml-auto text-xs text-slate-500" id="count-member">0 users</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input type="radio" name="target" value="kasir" class="w-4 h-4 text-[#115E59] focus:ring-[#115E59]">
+                        <span class="ml-3 text-sm font-semibold text-slate-700">Kasir</span>
+                        <span class="ml-auto text-xs text-slate-500" id="count-kasir">0 users</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input type="radio" name="target" value="admin" class="w-4 h-4 text-[#115E59] focus:ring-[#115E59]">
+                        <span class="ml-3 text-sm font-semibold text-slate-700">Admin</span>
+                        <span class="ml-auto text-xs text-slate-500" id="count-admin">0 users</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Channels -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 mb-3">Notification Channels *</label>
+                <div class="space-y-2">
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input type="checkbox" name="channel" value="firebase" checked class="w-4 h-4 text-[#115E59] focus:ring-[#115E59] rounded">
+                        <span class="ml-3 text-sm font-semibold text-slate-700">Firebase</span>
+                        <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Active</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl bg-slate-50 cursor-not-allowed opacity-60">
+                        <input type="checkbox" name="channel" value="whatsapp" disabled class="w-4 h-4 text-slate-400 rounded">
+                        <span class="ml-3 text-sm font-semibold text-slate-500">WhatsApp</span>
+                        <span class="ml-2 px-2 py-0.5 bg-slate-200 text-slate-600 text-xs font-semibold rounded-full">Coming Soon</span>
+                    </label>
+                    <label class="flex items-center p-3 border border-slate-200 rounded-xl bg-slate-50 cursor-not-allowed opacity-60">
+                        <input type="checkbox" name="channel" value="telegram" disabled class="w-4 h-4 text-slate-400 rounded">
+                        <span class="ml-3 text-sm font-semibold text-slate-500">Telegram</span>
+                        <span class="ml-2 px-2 py-0.5 bg-slate-200 text-slate-600 text-xs font-semibold rounded-full">Coming Soon</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-3 pt-4 border-t border-slate-200">
+                <button type="submit" class="px-6 py-3 bg-[#115E59] hover:bg-[#165654] text-white rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Send Broadcast
+                </button>
+                <button type="button" onclick="previewBroadcast()" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                    Preview
+                </button>
+                <a href="/admin/notification-center" class="px-6 py-3 text-slate-600 hover:text-slate-800 text-sm font-semibold transition-colors">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Info Box -->
+    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+        <div class="flex items-start gap-3">
+            <div class="text-blue-600 text-xl">ℹ️</div>
+            <div class="flex-1 text-sm text-blue-800">
+                <strong>Catatan:</strong> Broadcast akan ditambahkan ke queue dan dikirim secara bertahap. Anda dapat melihat progress di halaman Queue dan History.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Character counter
+document.getElementById('broadcast-message').addEventListener('input', function() {
+    document.getElementById('char-count').textContent = this.value.length;
+});
+
+// Load target counts
+async function loadTargetCounts() {
+    try {
+        const res = await fetch('/admin/api/notification/target-counts');
+        const data = await res.json();
+        
+        if (data.ok) {
+            document.getElementById('count-all').textContent = `${data.counts.all} users`;
+            document.getElementById('count-reseller').textContent = `${data.counts.reseller} users`;
+            document.getElementById('count-member').textContent = `${data.counts.member} users`;
+            document.getElementById('count-kasir').textContent = `${data.counts.kasir} users`;
+            document.getElementById('count-admin').textContent = `${data.counts.admin} users`;
+        }
+    } catch (e) {
+        console.error('Failed to load target counts:', e);
+    }
+}
+
+function previewBroadcast() {
+    const title = document.getElementById('broadcast-title').value;
+    const message = document.getElementById('broadcast-message').value;
+    const target = document.querySelector('input[name="target"]:checked').value;
+    const channels = Array.from(document.querySelectorAll('input[name="channel"]:checked')).map(c => c.value);
+    
+    if (!title || !message) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Incomplete Form',
+            text: 'Please fill in title and message',
+            confirmButtonColor: '#115E59'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Preview Broadcast',
+        html: `
+            <div class="text-left space-y-3">
+                <div>
+                    <strong class="text-sm text-slate-600">Title:</strong>
+                    <p class="text-slate-800 font-semibold">${title}</p>
+                </div>
+                <div>
+                    <strong class="text-sm text-slate-600">Message:</strong>
+                    <p class="text-slate-800">${message}</p>
+                </div>
+                <div>
+                    <strong class="text-sm text-slate-600">Target:</strong>
+                    <p class="text-slate-800 capitalize">${target}</p>
+                </div>
+                <div>
+                    <strong class="text-sm text-slate-600">Channels:</strong>
+                    <p class="text-slate-800">${channels.join(', ')}</p>
+                </div>
+            </div>
+        `,
+        confirmButtonColor: '#115E59',
+        confirmButtonText: 'OK'
+    });
+}
+
+async function sendBroadcast(event) {
+    event.preventDefault();
+    
+    const title = document.getElementById('broadcast-title').value;
+    const message = document.getElementById('broadcast-message').value;
+    const imageUrl = document.getElementById('broadcast-image').value;
+    const target = document.querySelector('input[name="target"]:checked').value;
+    const channels = Array.from(document.querySelectorAll('input[name="channel"]:checked')).map(c => c.value);
+    
+    if (channels.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Channel Selected',
+            text: 'Please select at least one notification channel',
+            confirmButtonColor: '#115E59'
+        });
+        return;
+    }
+    
+    // Confirm
+    const result = await Swal.fire({
+        title: 'Send Broadcast?',
+        html: `
+            <div class="text-left text-sm text-slate-600">
+                <p class="mb-2">Anda akan mengirim broadcast ke <strong>${target}</strong> melalui <strong>${channels.join(', ')}</strong>.</p>
+                <p>Broadcast akan masuk ke queue dan dikirim secara bertahap.</p>
+            </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#115E59',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Yes, Send Now',
+        cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    // Send
+    Swal.fire({
+        title: 'Sending Broadcast...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/notification/broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: title,
+                message: message,
+                image_url: imageUrl,
+                target_type: target,
+                channels: channels
+            })
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Broadcast Sent!',
+                html: `
+                    <div class="text-left space-y-2">
+                        <p><strong>Success:</strong> ${data.result.success_count}</p>
+                        <p><strong>Failed:</strong> ${data.result.failed_count}</p>
+                        <p class="text-sm text-slate-600 mt-3">Check Queue or History page for details.</p>
+                    </div>
+                `,
+                confirmButtonColor: '#115E59'
+            }).then(() => {
+                window.location.href = '/admin/notification-center/history';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadTargetCounts();
+});
+</script>
+{% endblock %}

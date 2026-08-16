@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Kebijakan Privasi · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-4xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 md:p-12">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-black text-[#115E59] tracking-tight">KEBIJAKAN PRIVASI</h1>
+            <p class="text-slate-500 mt-2">Terakhir diperbarui: 30 April 2026</p>
+        </div>
+
+        <div class="prose prose-slate max-w-none space-y-6 text-slate-700 leading-relaxed">
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-[#115E59] rounded-full"></span> 1. Pendahuluan
+                </h2>
+                <p>Selamat datang di <strong>Garuda Tell</strong>. Kami sangat menghargai privasi Anda dan berkomitmen untuk melindungi data pribadi Anda. Kebijakan ini menjelaskan bagaimana kami mengumpulkan dan menggunakan informasi Anda saat menggunakan layanan PPOB kami.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-[#115E59] rounded-full"></span> 2. Informasi yang Kami Kumpulkan
+                </h2>
+                <p>Kami hanya mengumpulkan informasi yang diperlukan untuk kelancaran transaksi Anda, yaitu:</p>
+                <ul class="list-disc ml-6 space-y-2">
+                    <li><strong>Identitas Akun:</strong> Username dan Password yang dienkripsi.</li>
+                    <li><strong>Komunikasi:</strong> Nomor WhatsApp aktif untuk verifikasi, laporan transaksi, dan layanan pelanggan.</li>
+                    <li><strong>Data Transaksi:</strong> Nomor tujuan pengisian, jenis produk, dan riwayat mutasi saldo.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-[#115E59] rounded-full"></span> 3. Penggunaan Informasi
+                </h2>
+                <p>Data Anda digunakan secara eksklusif untuk:</p>
+                <ul class="list-disc ml-6 space-y-2">
+                    <li>Memproses pesanan pulsa, kuota, dan token listrik Anda ke provider terkait.</li>
+                    <li>Memberikan notifikasi status transaksi secara real-time.</li>
+                    <li>Meningkatkan keamanan akun dari akses yang tidak sah.</li>
+                    <li>Menyediakan bantuan teknis melalui Admin WhatsApp.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-[#115E59] rounded-full"></span> 4. Keamanan Data
+                </h2>
+                <p>Garuda Tell menggunakan teknologi enkripsi tingkat tinggi untuk memastikan data Anda aman di server kami. Kami tidak pernah menjual atau membagikan data pribadi Anda kepada pihak ketiga untuk kepentingan iklan.</p>
+            </section>
+
+            <section>
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-[#115E59] rounded-full"></span> 5. Hubungi Kami
+                </h2>
+                <p>Jika Anda memiliki pertanyaan mengenai kebijakan privasi ini, silakan hubungi layanan bantuan kami di:</p>
+                <div class="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 inline-block">
+                    <p class="font-bold text-[#115E59]">WhatsApp Admin Garuda Tell</p>
+                    <p class="text-sm">Klik tombol bantuan pada aplikasi untuk chat langsung.</p>
+                </div>
+            </section>
+        </div>
+        
+        <div class="mt-12 pt-8 border-t border-dashed border-slate-200 text-center">
+            <a href="/" class="px-6 py-3 bg-[#115E59] text-white rounded-xl font-bold text-sm hover:bg-teal-800 transition">Kembali ke Beranda</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% block title %}Riwayat · {{ APP_NAME }}{% endblock %}
+{% block body %}
+{% include '_navbar_user.html' %}
+<main class="max-w-3xl mx-auto px-4 py-6 pb-24 md:pb-10 space-y-4">
+  <div class="flex items-end justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight text-[#115E59]">Riwayat Transaksi</h1>
+      <p class="text-sm text-slate-600 mt-1">Klik baris untuk melihat detail & token.</p>
+    </div>
+  </div>
+    <div class="mt-5 flex gap-2">
+      <select id="searchCategory" class="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#115E59]/20 shadow-sm" onchange="filterHistory()">
+        <option value="all">Semua</option>
+        <option value="name">Nama Produk</option>
+        <option value="target">Nomor/Tujuan</option>
+        <option value="date">Tanggal</option>
+      </select>
+      <div class="relative w-full">
+        <input type="text" id="searchInput" class="w-full bg-white border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/20 shadow-sm" placeholder="Ketik pencarian..." onkeyup="filterHistory()">
+        <button id="clearHistorySearch" type="button" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors" onclick="document.getElementById('searchInput').value=''; filterHistory(); document.getElementById('searchInput').focus();">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+    </div>
+    
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft divide-y divide-ink-100 overflow-hidden">
+    {% for t in transactions %}
+        {% set tiket = get_admin_reply_v2(t.order_id) %}
+      <details class="group tx-item" data-name="{{ t.name }}" data-target="{{ t.target }}" data-date="{{ t.wib_time }}">
+        <summary class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/50 transition">
+          <div class="min-w-0 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-50/50 grid place-items-center text-slate-800 shrink-0">
+              {% set is_dibalas = tiket and tiket.a %}
+              {% set t_db = user_tickets[t.order_id] if t.order_id in user_tickets else None %}
+              {% set is_komplain = is_dibalas or t_db %}
+
+              {% if is_dibalas %}
+                  <button type="button" onclick="bacaDanResetIcon('{{ t.order_id }}', `{{ tiket.a | replace('
+', '<br>') | escape }}`); event.preventDefault(); event.stopPropagation();" class="text-emerald-500 animate-bounce" id="icon-replied-{{ t.order_id }}" title="Baca Balasan">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                  </button>
+                  <span class="hidden text-slate-800" id="icon-normal-{{ t.order_id }}">
+                     {% if t.kind=='topup' %}<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>{% else %}<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18l-2 11a2 2 0 01-2 2H7a2 2 0 01-2-2L3 7zM8 7V5a4 4 0 018 0v2"/></svg>{% endif %}
+                  </span>
+              {% elif is_komplain %}
+                  <div class="text-emerald-400 animate-bounce" title="Komplain Diproses">
+                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                  </div>
+              {% else %}
+                  <span class="text-slate-800">
+                  {% if t.kind=='topup' %}<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>{% else %}<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18l-2 11a2 2 0 01-2 2H7a2 2 0 01-2-2L3 7zM8 7V5a4 4 0 018 0v2"/></svg>{% endif %}
+                  </span>
+              {% endif %}
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-[#115E59] truncate">{{ t.name }}</div>
+              <div class="text-xs text-slate-600 mt-0.5 leading-snug">{{ t.target }} · {{ t.wib_time }}</div>
+            </div>
+          </div>
+          <div class="text-right shrink-0 flex items-center gap-2">
+            <div>
+              <div class="text-sm font-semibold {{ 'text-emerald-600' if t.kind=='topup' else 'text-[#115E59]' }}">{{ '+' if t.kind=='topup' else '−' }}Rp {{ '{:,.0f}'.format(t.price).replace(',', '.') }}</div>
+              <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide font-semibold rounded-full px-2 py-0.5
+                {% if t.status=='success' %}bg-emerald-50 text-emerald-700{% elif t.status=='pending' %}bg-amber-50 text-amber-700{% else %}bg-rose-50 text-rose-700{% endif %}">{{ t.status }}</span>
+            </div>
+            <svg class="chev w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </summary>
+        <div class="px-4 pb-4 pt-1 bg-slate-50/50/60 border-t border-slate-100">
+          <div class="grid grid-cols-2 gap-3 text-xs mt-3">
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Order ID</div>
+              <div class="font-mono text-[#165654] mt-0.5 break-all">{{ t.order_id }}</div>
+            </div>
+            <div>
+              <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">SKU</div>
+              <div class="font-mono text-[#165654] mt-0.5">{{ t.sku }}</div>
+            </div>
+            <div class="col-span-2">
+              <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Tujuan</div>
+              <div class="text-[#165654] mt-0.5 break-all">{{ t.target }}</div>
+            </div>
+            <div class="col-span-2 mt-1 border-t border-slate-100/80 pt-2">
+              <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold flex items-center gap-1">
+                 <span class="bg-teal-100 text-teal-800 px-1 py-0.5 rounded text-[8px]">PETUGAS</span> Dilayani Oleh
+              </div>
+              <div class="text-[#165654] mt-0.5 font-bold uppercase">{{ t.kasir_name if t.kasir_name else 'BOS/ADMIN' }}</div>
+            </div>
+          </div>
+          {% if t.status == 'success' and t.sn %}
+            <div class="mt-3 bg-white border border-slate-200 rounded-xl p-3">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{% if 'PLN' in (t.name or '')|upper or 'TOKEN' in (t.name or '')|upper %}Token PLN{% else %}Serial Number / Token{% endif %}</div>
+                <button type="button" onclick='copyText({{ t.sn|tojson }}, "Token")' class="text-[11px] font-semibold text-slate-800 hover:text-[#115E59] flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-2M16 3h4v4M10 14L20 4"/></svg>
+                  Salin
+                </button>
+              </div>
+              <div class="font-mono text-[13px] leading-relaxed text-[#115E59] break-words select-all bg-slate-50/50 rounded-lg px-4 py-3 border border-slate-100 sn-formatter" data-sn="{{ t.sn }}">{{ t.sn }}</div>
+            </div>
+          {% elif t.status == 'pending' %}
+            <div class="mt-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-xs">⏳  Pesanan masih diproses. Token akan tampil di sini setelah berhasil.</div>
+          {% elif t.status == 'failed' %}
+            <div class="mt-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-3 text-xs">✕ Transaksi gagal. Saldo telah dikembalikan otomatis.{% if t.message %}<div class="mt-1 text-rose-700/80">{{ t.message }}</div>{% endif %}</div>
+          {% endif %}
+          {% if t.message and t.status == 'success' %}
+            <div class="mt-2 text-[11px] text-slate-600">{{ t.message }}</div>
+          {% endif %}
+
+          
+          
+
+          
+          
+
+          
+          
+
+          
+          
+          
+          
+          {% if t.status == 'success' %}
+          <div class="mt-3 mb-1">
+              <a href="/receipt/{{ t.order_id }}" class="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                  Cetak Struk Digital
+              </a>
+          </div>
+          {% endif %}
+          
+          {% set t_db = user_tickets[t.order_id] if t.order_id in user_tickets else None %}
+          {% set is_dibalas = tiket and tiket.a %}
+          {% set is_komplain = is_dibalas or t_db %}
+          {% set msg_user = tiket.q if (tiket and tiket.q) else (t_db.message if t_db else '') %}
+
+          {% if is_komplain %}
+          <div class="mt-3 mb-1 p-3 bg-slate-50 border border-slate-200 rounded-xl shadow-sm">
+             <div class="mb-2 {% if is_dibalas %}pb-2 border-b border-slate-200/60{% endif %}">
+                 <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Laporan Anda:</div>
+                 <div class="text-xs text-slate-700 mt-1 italic break-words">"{{ msg_user | replace('KENDALA: ', '') | replace('
+PESAN:', ' -') }}"</div>
+             </div>
+
+             {% if is_dibalas %}
+             <div class="mt-2 text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Balasan Admin {{ current_user.store_name or 'Garuda Tell' }}:
+             </div>
+             <div class="text-sm text-emerald-900 mt-1 font-medium break-words">"{{ tiket.a }}"</div>
+             {% else %}
+             <div class="mt-2 pt-2 flex items-center gap-2 text-emerald-500">
+                <div class="animate-bounce">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                </div>
+                <span class="text-xs font-semibold italic tracking-wide">Menunggu balasan admin...</span>
+             </div>
+             {% endif %}
+          </div>
+          {% endif %}
+
+          <div class="mt-4 border-t border-slate-200/60 pt-3 flex justify-end">
+             {% if not is_komplain %}
+                 <button type="button" onclick="bukaKomplain(this)" data-id="{{ t.order_id }}" data-name="{{ t.name }}" data-target="{{ t.target }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-white text-xs font-medium hover:bg-emerald-600 transition shadow-sm focus:ring-2 focus:ring-emerald-500/30">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    Komplain
+                 </button>
+             {% else %}
+                 <span class="text-[11px] text-slate-500 font-medium italic mr-1 mt-1">Status Laporan: {% if is_dibalas %}Dibalas Admin{% else %}Diproses{% endif %}</span>
+             {% endif %}
+          </div>
+        </details>
+    {% else %}
+      <div class="p-12 text-center text-sm text-slate-600">Belum ada transaksi.</div>
+    {% endfor %}
+  </div>
+
+    
+<script>
+    function bacaDanResetIcon(orderId, replyText) {
+        Swal.fire({
+            icon: 'success', 
+            title: 'Balasan Admin',
+            html: `<div class="text-left text-sm p-4 bg-slate-50 rounded-lg border border-slate-200 mt-2">${replyText}</div>`,
+            confirmButtonText: 'Tutup', 
+            confirmButtonColor: '#10b981'
+        }).then(() => {
+            // Animasi Sihir: Hilangkan pesan hijau, Munculkan keranjang normal!
+            const iconReplied = document.getElementById('icon-replied-' + orderId);
+            const iconNormal = document.getElementById('icon-normal-' + orderId);
+            if(iconReplied) iconReplied.classList.add('hidden');
+            if(iconNormal) iconNormal.classList.remove('hidden');
+        });
+    }
+</script>
+</main>
+
+{% endblock %}
+
+
+{% block scripts %}
+
+<script>
+function filterHistory() {
+  const cat = document.getElementById('searchCategory').value;
+  const input = document.getElementById('searchInput');
+  const q = input.value.toLowerCase().trim();
+  
+  // Tampilkan/Sembunyikan tombol X
+  document.getElementById('clearHistorySearch').classList.toggle('hidden', q.length === 0);
+  
+  const items = document.querySelectorAll('.tx-item');
+  let found = false;
+  
+  items.forEach(item => {
+    const name = (item.getAttribute('data-name') || '').toLowerCase();
+    const target = (item.getAttribute('data-target') || '').toLowerCase();
+    const dateStr = (item.getAttribute('data-date') || '').toLowerCase(); // Contoh: 13 mei 2026 14:00
+    
+    let match = false;
+    if (cat === 'all') {
+      match = name.includes(q) || target.includes(q) || dateStr.includes(q);
+    } else if (cat === 'name') {
+      match = name.includes(q);
+    } else if (cat === 'target') {
+      match = target.includes(q);
+    } else if (cat === 'date') {
+      match = dateStr.includes(q); // Cukup ketik "13", mesin akan menangkap "13 mei..."
+    }
+    
+    if (match) {
+      item.style.display = '';
+      found = true;
+    } else {
+      item.style.display = 'none';
+    }
+  });
+  
+  // Jika tidak ada yang cocok
+  let emptyMsg = document.getElementById('emptySearchMsg');
+  if (!found && q !== '') {
+    if (!emptyMsg) {
+      emptyMsg = document.createElement('div');
+      emptyMsg.id = 'emptySearchMsg';
+      emptyMsg.className = 'p-8 text-center text-slate-500 text-sm font-medium';
+      emptyMsg.innerHTML = 'Tidak ada transaksi yang cocok.';
+      document.querySelector('.divide-y').appendChild(emptyMsg);
+    }
+    emptyMsg.style.display = 'block';
+  } else if (emptyMsg) {
+    emptyMsg.style.display = 'none';
+  }
+}
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+      document.querySelectorAll('.sn-formatter').forEach(el => {
+          let sn = el.getAttribute('data-sn');
+          if (!sn) return;
+
+          // 🌟 A. DETEKSI TOKEN PLN KELAS SULTAN
+          let parts = sn.split('/');
+          let firstPartDigits = parts[0].replace(/[^0-9]/g, '');
+          // Deteksi Super Ketat: Bagian pertama SEBELUM garis miring harus persis 20 digit angka!
+          let isPLN = (firstPartDigits.length === 20 && parts.length >= 3);
+
+          if (isPLN) {
+              let tokenRaw = parts[0].trim();
+              let nama = parts[1] ? parts[1].trim() : '-';
+              let tarif = parts[2] ? parts[2].trim() : '';
+              let daya = parts[3] ? parts[3].trim() : '';
+              let kwh = parts[4] ? parts[4].trim() : '';
+
+              // Bersihkan token dari strip, lalu beri spasi per 4 angka agar cantik
+              let tokenClean = tokenRaw.replace(/[^0-9]/g, '');
+              if(tokenClean.length >= 20) {
+                  tokenClean = tokenClean.substring(0,20).replace(/(.{4})/g, '$1 ').trim();
+              } else {
+                  tokenClean = tokenRaw;
+              }
+
+              el.innerHTML = `
+                  <div class="text-center mb-4 mt-1">
+                      <div class="text-[10px] text-slate-400 font-bold mb-1.5 uppercase tracking-widest">Nomor Token Listrik</div>
+                      <div class="text-[20px] sm:text-[22px] font-black text-emerald-600 tracking-widest py-3 bg-emerald-50 border border-emerald-200 rounded-xl select-all shadow-sm font-mono">${tokenClean}</div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 text-xs border-t border-slate-200/60 pt-3 font-sans text-left">
+                      <div class="col-span-2">
+                          <span class="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">Atas Nama</span>
+                          <span class="font-bold text-slate-800 text-sm">${nama}</span>
+                      </div>
+                      <div>
+                          <span class="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">Tarif / Daya</span>
+                          <span class="font-bold text-slate-700">${tarif} ${daya}</span>
+                      </div>
+                      <div>
+                          <span class="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">Jml KWH</span>
+                          <span class="font-bold text-slate-700">${kwh}</span>
+                      </div>
+                  </div>
+              `;
+              
+              // Ubah background luar jadi rapi
+              el.classList.remove('bg-slate-50/50', 'text-[#115E59]');
+              el.classList.add('bg-white', 'border', 'border-slate-200', 'shadow-sm');
+          } 
+          // 🌟 B. DETEKSI PAKET DATA / LAINNYA
+          else {
+              let res = sn;
+              // Regex Dewa: Cari angka + titik yang BUKAN angka desimal (biar KWH 33.70 aman)
+              res = res.replace(/\s*[-_]*\s*,\s*(?=\d+\.(?!\d))/g, '<br><br>');
+              res = res.replace(/\s*\/\s*(?=\d+\.(?!\d))/g, '<br><br>');
+              res = res.replace(/(^|<br><br>)\s*(\d+\.(?!\d))/g, '$1<span class="font-black text-slate-800 text-base mr-1">$2</span> ');
+              el.innerHTML = res;
+          }
+      });
+  });
+</script>
+
+
+<script>
+  async function bukaKomplain(btn) {
+    // Tarik data dengan aman 
+    const t_id = btn.getAttribute('data-id');
+    const t_name = btn.getAttribute('data-name');
+    const t_target = btn.getAttribute('data-target');
+    
+    const htmlForm = `
+      <div class="text-left space-y-3">
+        <div class="p-3 bg-slate-50/50 border border-slate-100 rounded-xl">
+           <div class="text-[10px] text-slate-600 font-semibold uppercase tracking-wider">Info Transaksi (Terkunci)</div>
+           <div class="mt-1 text-sm font-semibold text-[#115E59]">${t_name}</div>
+           <div class="text-xs text-slate-600 font-mono mt-0.5">ID: ${t_id}</div>
+           <div class="text-xs text-slate-600 mt-0.5">Tujuan: ${t_target}</div>
+        </div>
+        <div>
+           <label class="block text-xs font-semibold text-slate-800 mb-1">Pilih Kendala</label>
+           <select id="kategori_masalah" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#115E59]/10">
+              <option value="Sukses, tapi pulsa/kuota belum masuk">Sukses, tapi pulsa/kuota belum masuk</option>
+              <option value="SN/Token tidak valid">SN/Token tidak valid</option>
+              <option value="Transaksi terlalu lama (Pending)">Transaksi terlalu lama (Pending)</option>
+              <option value="Lainnya">Lainnya...</option>
+           </select>
+        </div>
+        <div>
+           <label class="block text-xs font-semibold text-slate-800 mb-1">Pesan Tambahan</label>
+           <textarea id="pesan_komplain" rows="2" placeholder="Cth: Tolong dicek bos, agen udah nunggu lama." class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10"></textarea>
+        </div>
+      </div>
+    `;
+
+    const { isConfirmed, value } = await Swal.fire({
+      title: 'Kirim Komplain',
+      html: htmlForm,
+      showCancelButton: true,
+      confirmButtonText: 'Kirim Laporan',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#10b981', // Warna Hijau Emerald
+      focusConfirm: false,
+      preConfirm: () => {
+        return {
+          order_id: t_id,
+          jenis_kendala: document.getElementById('kategori_masalah').value,
+          pesan: document.getElementById('pesan_komplain').value.trim()
+        }
+      }
+    });
+
+    if (isConfirmed && value) {
+        Swal.fire({title: 'Mengirim...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+        const r = await postJSON('/user/tiket/buat', value);
+        if (r.ok) {
+            // Ubah tombol komplain menjadi status pending agar terlihat interaktif
+            btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Diproses`;
+            btn.classList.replace('bg-emerald-500', 'bg-amber-500');
+            btn.classList.replace('hover:bg-emerald-600', 'hover:bg-amber-600');
+            btn.disabled = true; // Kunci tombol
+            
+            Swal.fire({
+                icon: 'success', 
+                title: 'Terkirim!', 
+                text: 'Sistem telah meneruskan laporan Anda ke Admin.',
+                timer: 2000, // Pop-up hilang otomatis dalam 2 detik
+                showConfirmButton: false
+            }).then(() => {
+                location.reload(); // Auto-refresh halaman!
+            });
+        } else {
+            Swal.fire({icon: 'error', title: 'Gagal', text: 'Gagal mengirim komplain.'});
+        }
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Produk · Admin{% endblock %}
+{% block body %}
+{% include '_navbar_admin.html' %}
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-semibold tracking-tight text-[#115E59] shrink-0">Manajemen Produk</h1>
+    
+    <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-xl mr-auto ml-2 lg:ml-6">
+      <div class="relative flex-1">
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input id="liveSearch" type="text" placeholder="Cari SKU, Nama..." class="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59] transition shadow-sm" />
+      </div>
+      {% set categories = [] %}
+      {% for p in products %}
+        {% if p.category not in categories %}
+          {% set _ = categories.append(p.category) %}
+        {% endif %}
+      {% endfor %}
+      <select id="categoryFilter" onchange="filterCategory()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59] transition shadow-sm">
+        <option value="">Semua Kategori</option>
+        {% for cat in categories|sort %}
+        <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ url_for('admin.pricelist') }}" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[#165654] text-sm font-medium hover:bg-slate-50/50 transition">Auto-Pull Digiflazz</a>
+      <button onclick="openSync()" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[#165654] text-sm font-medium hover:bg-slate-50/50 transition">⟳ Sync Harga</button>
+      <button onclick="openProductForm()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#115E59] to-[#0D9488] hover:opacity-90 shadow-md text-white text-sm font-semibold transition">+ Tambah Produk</button>
+    </div>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50/50 text-[11px] uppercase text-slate-600 tracking-wider">
+        <tr>
+          <th class="text-left px-3 py-2.5 font-semibold">SKU</th><th class="text-left px-3 py-2.5 font-semibold">Nama</th>
+          <th class="text-left px-3 py-2.5 font-semibold">Kategori</th><th class="text-left px-3 py-2.5 font-semibold">Brand</th>
+          <th class="text-right px-3 py-2.5 font-semibold">Harga Beli</th><th class="text-right px-3 py-2.5 font-semibold">Margin</th>
+          <th class="text-right px-3 py-2.5 font-semibold text-[#115E59]">Harga Member</th>
+          <th class="text-right px-3 py-2.5 font-semibold text-amber-700">Harga Reseller</th><th class="text-center px-3 py-2.5 font-semibold">Status</th>
+          <th class="text-center px-3 py-2.5 font-semibold">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="productTableBody" class="divide-y divide-ink-100">
+        {% for p in products %}
+          <tr data-product='{{ p|tojson }}' class="hover:bg-slate-50/50/60">
+            <td class="px-3 py-2.5 font-mono text-xs text-slate-800">{{ p.sku }}</td>
+            <td class="px-3 py-2.5">{{ p.name }}</td>
+            <td class="px-3 py-2.5">{{ p.category }}</td>
+            <td class="px-3 py-2.5">{{ p.brand }}</td>
+            <td class="px-3 py-2.5 text-right">Rp {{ '{:,.0f}'.format(p.base_price).replace(',', '.') }}</td>
+            <td class="px-3 py-2.5 text-right text-emerald-600 font-medium">+{{ '{:,.0f}'.format(p.margin).replace(',', '.') }}</td>
+            
+            {% set bp = p.base_price %}
+            {% set m = p.margin %}
+            {% if m > 0 %}
+                {% set h_member = bp + m %}
+                {% set h_reseller = (bp + (m * 0.7)) | int %}
+                {% set badge = '<br><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-black shadow-sm border border-amber-200">Manual</span>' %}
+            {% else %}
+                {% if bp <= 10000 %}
+                    {% set m_mem = 1500 %}
+                    {% set m_res = 500 %}
+                {% elif bp <= 25000 %}
+                    {% set m_mem = 2000 %}
+                    {% set m_res = 800 %}
+                {% elif bp <= 50000 %}
+                    {% set m_mem = 2500 %}
+                    {% set m_res = 1200 %}
+                {% elif bp <= 100000 %}
+                    {% set m_mem = 3000 %}
+                    {% set m_res = 1500 %}
+                {% else %}
+                    {% set calc_mem = bp * 0.008 %}
+                    {% set m_mem = 4000 if calc_mem < 4000 else calc_mem %}
+                    {% set calc_res = bp * 0.005 %}
+                    {% set m_res = 2000 if calc_res < 2000 else calc_res %}
+                {% endif %}
+                {% set h_member = (bp + m_mem) | int %}
+                {% set h_reseller = (bp + m_res) | int %}
+                {% set badge = '<br><span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-black shadow-sm border border-emerald-200">Auto Tier</span>' %}
+            {% endif %}
+            <td class="px-3 py-2.5 text-right font-bold text-[#115E59] leading-tight">Rp {{ '{:,.0f}'.format(h_member).replace(',', '.') }} {{ badge|safe }}</td>
+            <td class="px-3 py-2.5 text-right font-bold text-amber-600 leading-tight">Rp {{ '{:,.0f}'.format(h_reseller).replace(',', '.') }} {{ badge|safe }}</td>
+
+            <td class="px-3 py-2.5 text-center"><span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full {{ 'bg-emerald-50 text-emerald-700' if p.is_active else 'bg-slate-50/50 text-slate-600' }}">{{ 'aktif' if p.is_active else 'nonaktif' }}</span></td>
+            <td class="px-3 py-2.5 text-center whitespace-nowrap">
+              <button onclick='editProduct(this)' class="text-xs font-semibold text-[#165654] hover:text-[#115E59] hover:underline">Edit</button>
+              <button onclick='deleteProduct({{ p.id }})' class="text-xs font-semibold text-rose-600 hover:underline ml-3">Hapus</button>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="10" class="px-3 py-10 text-center text-slate-500">Belum ada produk. Gunakan Auto-Pull Digiflazz untuk impor.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+  function field(label, html) {
+    return `<div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">${label}</label>${html}</div>`;
+  }
+  const inp = (id, val, attrs='') => `<input id="${id}" value="${val||''}" ${attrs} class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />`;
+  function productFormHTML(p) {
+    p = p || {};
+    return `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+        ${field('SKU', inp('f_sku', p.sku, p.sku?'readonly':''))}
+        ${field('Nama Produk', inp('f_name', p.name))}
+        ${field('Kategori', inp('f_category', p.category))}
+        ${field('Brand', inp('f_brand', p.brand))}
+        ${field('Tipe', inp('f_type', p.type||'prepaid'))}
+        ${field('Harga Beli', `<input id="f_base_price" type="number" value="${p.base_price||0}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />`)}
+        ${field('Margin <span class="text-[9px] text-rose-600 bg-rose-50 px-1 py-0.5 rounded normal-case shadow-sm border border-rose-100 ml-1">0 = Auto Rumus</span>', `<input id="f_margin" type="number" value="${p.margin||0}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" /><div class="text-[10px] text-slate-500 mt-1.5 leading-tight"><b>Tips:</b> Biarkan margin <b class="text-rose-600">0</b> agar harga Member & Reseller dihitung otomatis. Isi angka untuk paksa harga manual.</div>`)}
+        ${field('Status', `<select id="f_active" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10"><option value="1" ${p.is_active!=0?'selected':''}>Aktif</option><option value="0" ${p.is_active==0?'selected':''}>Nonaktif</option></select>`)}
+        ${field('Langganan (6 Hari)', `<div class="mt-2 flex items-center"><input type="checkbox" id="f_is_langganan" class="w-4 h-4 text-[#115E59] bg-slate-100 border-slate-300 rounded focus:ring-[#115E59]" ${p.is_langganan==1?'checked':''}> <label for="f_is_langganan" class="ml-2 text-[11px] font-bold text-slate-600">Bisa Berlangganan</label></div>`)}
+        <div class="md:col-span-2">${field('Deskripsi', `<textarea id="f_description" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]">${p.description||''}</textarea>`)}</div>
+      </div>`;
+  }
+  async function openProductForm(p) {
+    const result = await Swal.fire({
+      title: p ? 'Edit Produk' : 'Tambah Produk', html: productFormHTML(p), width: 600,
+      showCancelButton: true, confirmButtonText: 'Simpan', cancelButtonText: 'Batal',
+      focusConfirm: false,
+      preConfirm: () => ({
+        sku: document.getElementById('f_sku').value.trim(),
+        name: document.getElementById('f_name').value.trim(),
+        category: document.getElementById('f_category').value.trim(),
+        brand: document.getElementById('f_brand').value.trim(),
+        type: document.getElementById('f_type').value.trim(),
+        base_price: document.getElementById('f_base_price').value,
+        margin: document.getElementById('f_margin').value,
+        is_active: document.getElementById('f_active').value,
+        is_langganan: document.getElementById('f_is_langganan').checked ? 1 : 0,
+        description: document.getElementById('f_description').value,
+      })
+    });
+    if (!result.isConfirmed || !result.value) return;
+    const r = await postJSON('{{ url_for('admin.products_save') }}', result.value);
+    if (r.ok) { notifySuccess('Produk disimpan'); setTimeout(() => location.reload(), 500); }
+    else notifyError(r.body.error || 'Gagal');
+  }
+  function editProduct(btn) {
+    const p = JSON.parse(btn.closest('tr').dataset.product);
+    openProductForm(p);
+  }
+  async function deleteProduct(id) {
+    const { isConfirmed } = await Swal.fire({title:'Hapus produk?', text:'Tindakan ini tidak bisa dibatalkan.', icon:'warning', showCancelButton:true, confirmButtonText:'Hapus', cancelButtonText:'Batal'});
+    if (!isConfirmed) return;
+    const r = await postJSON('/admin/products/delete/' + id, {});
+    if (r.ok) { notifySuccess('Produk dihapus'); setTimeout(() => location.reload(), 400); }
+    else notifyError('Gagal hapus');
+  }
+  async function openSync() {
+    const { isConfirmed } = await Swal.fire({title:'Sync harga?', text:'Update harga dasar dari Digiflazz, lalu hitung ulang harga jual = harga dasar + margin.', icon:'question', showCancelButton:true, confirmButtonText:'Ya, Sync'});
+    if (!isConfirmed) return;
+    Swal.fire({title:'Sync berjalan…', didOpen: () => Swal.showLoading(), allowOutsideClick:false, showConfirmButton:false});
+    const r = await postJSON('{{ url_for('admin.pricelist_sync') }}', {});
+    Swal.close();
+    if (r.ok) { await Swal.fire({icon:'success', title:`${r.body.updated} produk diupdate`}); location.reload(); }
+    else notifyError('Gagal sync');
+  }
+
+  // === FITUR LIVE SEARCH KILAT ===
+  const liveSearch = document.getElementById('liveSearch');
+  if(liveSearch) {
+    liveSearch.addEventListener('input', function() {
+      const query = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#productTableBody tr[data-product]');
+      rows.forEach(row => {
+        // Gabungkan seluruh teks di baris itu (SKU, Nama, Kategori, Brand)
+        const rowText = row.innerText.toLowerCase();
+        // Sembunyikan jika tidak cocok, tampilkan jika cocok
+        row.style.display = rowText.includes(query) ? '' : 'none';
+      });
+    });
+  }
+</script>
+{% endblock %}

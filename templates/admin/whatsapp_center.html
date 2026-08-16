@@ -1,0 +1,677 @@
+{% extends 'base.html' %}
+{% block title %}WhatsApp Center · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">WhatsApp Communication Center</h1>
+                <p class="text-sm text-slate-600 mt-1">Broadcast dan notifikasi via WhatsApp Driver</p>
+            </div>
+            <a href="/admin/integration-center" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                ← Kembali
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Status Panel</h2>
+            <div id="status-badge" class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                Loading...
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Nomor</div>
+                <div id="status-phone" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Current Driver</div>
+                <div id="status-driver" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Connection</div>
+                <div id="status-connection" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Last Seen</div>
+                <div id="status-last-seen" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Reconnect Count</div>
+                <div id="status-reconnect" class="text-sm font-bold text-slate-800">0</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Queue</div>
+                <div id="status-queue" class="text-sm font-bold text-slate-800">0</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Health</div>
+                <div id="status-health" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Information Card -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Driver Information</h2>
+            <div id="driver-badge" class="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full">
+                Active
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Current Driver</div>
+                <div id="driver-name" class="text-sm font-bold text-slate-800">Evolution API</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Driver Version</div>
+                <div id="driver-version" class="text-sm font-bold text-slate-800">v2.1.0</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Driver Status</div>
+                <div id="driver-status" class="text-sm font-bold text-green-700">Operational</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Provider Type</div>
+                <div id="driver-provider-type" class="text-sm font-bold text-slate-800">WhatsApp Business API</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Adapter Status</div>
+                <div id="driver-adapter-status" class="text-sm font-bold text-green-700">Ready</div>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2">
+            <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <p class="text-xs text-blue-800">
+                <strong>Future Driver Ready:</strong> Driver dapat diganti tanpa mengubah Notification Engine. Arsitektur modular memungkinkan swap driver dengan mudah.
+            </p>
+        </div>
+    </div>
+
+    <!-- Session Information Card -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Session Information</h2>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Pairing Status</div>
+                <div id="session-pairing" class="text-sm font-bold text-green-700">Paired</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Session Folder</div>
+                <div id="session-folder" class="text-sm font-mono text-slate-800">/sessions/garuda</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Device ID</div>
+                <div id="session-device-id" class="text-sm font-mono text-slate-800">ABC123XYZ789</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Created</div>
+                <div id="session-created" class="text-sm font-bold text-slate-800">2026-08-01 10:30</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Updated</div>
+                <div id="session-updated" class="text-sm font-bold text-slate-800">2026-08-07 11:45</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Last Backup</div>
+                <div id="session-backup" class="text-sm font-bold text-slate-800">2026-08-07 00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Card -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Configuration</h2>
+            <div id="config-badge" class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                Loading...
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">API URL</div>
+                <div id="config-api-url" class="text-sm font-mono text-slate-800 break-all">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">API Key</div>
+                <div id="config-api-key" class="text-sm font-mono text-slate-800">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Card -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white border border-slate-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Messages Sent</div>
+            <div id="health-sent" class="text-3xl font-black text-[#115E59]">0</div>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-green-600 font-semibold uppercase tracking-wider mb-2">Success Rate</div>
+            <div id="health-success" class="text-3xl font-black text-green-700">0%</div>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-[20px] p-5 shadow-sm">
+            <div class="text-xs text-red-600 font-semibold uppercase tracking-wider mb-2">Failed</div>
+            <div id="health-failed" class="text-3xl font-black text-red-700">0</div>
+        </div>
+    </div>
+
+    <!-- Action Card -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Actions</h2>
+        
+        <div class="flex flex-wrap gap-3">
+            <button onclick="pairDevice()" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                Pair Device
+            </button>
+
+            <button onclick="reconnectSession()" class="px-5 py-2.5 bg-[#115E59] hover:bg-[#165654] text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Reconnect
+            </button>
+            
+            <button onclick="restartSession()" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Restart Session
+            </button>
+
+            <button onclick="disconnectSession()" class="px-5 py-2.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                Disconnect
+            </button>
+
+            <button onclick="deleteSession()" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                Delete Session
+            </button>
+
+            <button onclick="sendTestMessage()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Send Test Message
+            </button>
+
+            <button disabled class="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 opacity-50 cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Export Session
+            </button>
+
+            <button disabled class="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2 opacity-50 cursor-not-allowed">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Import Session
+            </button>
+        </div>
+
+        <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+            <p class="text-xs text-green-800">
+                <strong>✓ Session Manager Active:</strong> Semua tombol sudah terhubung dengan backend. Export/Import session akan diimplementasikan pada patch berikutnya.
+            </p>
+        </div>
+    </div>
+
+    <!-- Setup Wizard -->
+    <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-[24px] p-6 shadow-sm">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-lg font-bold text-blue-900 mb-1">Setup Wizard</h2>
+                <p class="text-sm text-blue-700">Ikuti langkah-langkah berikut untuk setup WhatsApp Integration</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Install Evolution API</div>
+                    <div class="text-sm text-blue-700 mt-1">Deploy Evolution API di server (Docker recommended)</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Konfigurasi di ConfigManager</div>
+                    <div class="text-sm text-blue-700 mt-1">Tambahkan WHATSAPP_API_URL dan WHATSAPP_API_KEY via config_manager.py</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">3</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Create Instance</div>
+                    <div class="text-sm text-blue-700 mt-1">Buat instance baru di Evolution API Dashboard</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">4</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Pair WhatsApp Device</div>
+                    <div class="text-sm text-blue-700 mt-1">Connect WhatsApp menggunakan QR Code atau Pairing Code</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">5</div>
+                <div>
+                    <div class="font-semibold text-green-900 text-sm">Ready to Use</div>
+                    <div class="text-sm text-green-700 mt-1">WhatsApp Center siap digunakan untuk broadcast</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-white/50 rounded-xl border border-blue-200">
+            <div class="text-xs text-blue-600 font-semibold uppercase tracking-wider mb-1">Documentation</div>
+            <div class="text-sm text-blue-800">
+                Evolution API Documentation: <a href="https://doc.evolution-api.com" target="_blank" class="underline hover:text-blue-900">doc.evolution-api.com</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// WhatsApp Session Manager - Connected to Backend
+async function loadConfiguration() {
+    try {
+        const res = await fetch('/admin/api/whatsapp/config');
+        const data = await res.json();
+        
+        if (data.ok) {
+            const configBadge = document.getElementById('config-badge');
+            
+            if (data.is_configured) {
+                configBadge.className = 'px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                configBadge.textContent = 'Configured';
+                
+                document.getElementById('config-api-url').textContent = data.config.WHATSAPP_API_URL || '-';
+                document.getElementById('config-api-key').textContent = data.config.WHATSAPP_API_KEY ? '••••••••••••' : '-';
+            } else {
+                configBadge.className = 'px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                configBadge.textContent = 'Not Configured';
+                
+                document.getElementById('config-api-url').textContent = '-';
+                document.getElementById('config-api-key').textContent = '-';
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load config:', e);
+        document.getElementById('config-badge').textContent = 'Error';
+    }
+}
+
+async function loadStatus() {
+    try {
+        const res = await fetch('/admin/api/whatsapp/status');
+        const data = await res.json();
+        
+        if (data.ok && data.status) {
+            const status = data.status;
+            const statusBadge = document.getElementById('status-badge');
+            
+            // Update badge
+            if (status.connected) {
+                statusBadge.className = 'px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                statusBadge.textContent = 'Connected';
+            } else {
+                statusBadge.className = 'px-3 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                statusBadge.textContent = 'Disconnected';
+            }
+            
+            // Update status panel
+            document.getElementById('status-phone').textContent = status.phone_number || '-';
+            document.getElementById('status-driver').textContent = 'Evolution API';
+            document.getElementById('status-connection').textContent = status.connected ? 'Connected' : 'Disconnected';
+            document.getElementById('status-last-seen').textContent = status.connected ? 'Just now' : '-';
+            document.getElementById('status-reconnect').textContent = '0';
+            document.getElementById('status-queue').textContent = '0';
+            document.getElementById('status-health').textContent = status.connected ? 'Healthy' : 'Disconnected';
+        }
+    } catch (e) {
+        console.error('Failed to load status:', e);
+        document.getElementById('status-badge').textContent = 'Error';
+    }
+}
+
+function loadHealth() {
+    // Placeholder for now - will be implemented with real metrics later
+    document.getElementById('health-sent').textContent = '0';
+    document.getElementById('health-success').textContent = '0%';
+    document.getElementById('health-failed').textContent = '0';
+}
+
+async function pairDevice() {
+    const { value: phone } = await Swal.fire({
+        title: 'Pair WhatsApp Device',
+        input: 'text',
+        inputLabel: 'WhatsApp Phone Number',
+        inputPlaceholder: '6281234567890',
+        showCancelButton: true,
+        confirmButtonColor: '#115E59',
+        inputValidator: (value) => {
+            if (!value) return 'Please enter phone number';
+            if (!/^62\d{9,13}$/.test(value)) return 'Format: 62xxxx (without +)';
+        }
+    });
+    
+    if (!phone) return;
+    
+    Swal.fire({
+        title: 'Generating Pairing Code...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/whatsapp/pair', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: phone })
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok && data.code) {
+            Swal.fire({
+                title: 'Pairing Code Generated!',
+                html: `
+                    <div class="text-center">
+                        <div class="text-4xl font-black text-green-700 tracking-widest mb-4 font-mono">${data.code}</div>
+                        <div class="text-sm text-slate-600 space-y-2 text-left">
+                            <p><strong>1.</strong> Open WhatsApp on your phone</p>
+                            <p><strong>2.</strong> Tap menu (⋮) → Linked Devices</p>
+                            <p><strong>3.</strong> Tap "Link a Device"</p>
+                            <p><strong>4.</strong> Tap "Link with phone number instead"</p>
+                            <p><strong>5.</strong> Enter code: <strong>${data.code}</strong></p>
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonColor: '#115E59',
+                timer: 60000,
+                timerProgressBar: true
+            });
+            
+            // Auto refresh status after 60 seconds
+            setTimeout(() => loadStatus(), 60000);
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Failed to generate pairing code'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+async function reconnectSession() {
+    Swal.fire({
+        title: 'Reconnecting...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/whatsapp/reconnect', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Reconnected',
+                text: 'Session reconnected successfully',
+                confirmButtonColor: '#115E59'
+            });
+            loadStatus();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+async function restartSession() {
+    const result = await Swal.fire({
+        title: 'Restart Session?',
+        text: 'This will restart the WhatsApp session',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#d97706',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Yes, Restart',
+        cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    Swal.fire({
+        title: 'Restarting...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/whatsapp/restart', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Restarted',
+                text: 'Session restarted successfully',
+                confirmButtonColor: '#115E59'
+            });
+            loadStatus();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+async function disconnectSession() {
+    const result = await Swal.fire({
+        title: 'Disconnect Session?',
+        text: 'You will need to pair again',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#64748b',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Yes, Disconnect',
+        cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    Swal.fire({
+        title: 'Disconnecting...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/whatsapp/disconnect', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Disconnected',
+                text: 'Session disconnected successfully',
+                confirmButtonColor: '#115E59'
+            });
+            loadStatus();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+async function deleteSession() {
+    const result = await Swal.fire({
+        title: 'Delete Session?',
+        text: 'This will permanently delete the session. You cannot undo this!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Yes, Delete',
+        cancelButtonText: 'Cancel'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    Swal.fire({
+        title: 'Deleting...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/whatsapp/delete', { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Deleted',
+                text: 'Session deleted successfully',
+                confirmButtonColor: '#115E59'
+            });
+            loadStatus();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+async function sendTestMessage() {
+    const { value: phone } = await Swal.fire({
+        title: 'Send Test Message',
+        input: 'text',
+        inputLabel: 'Recipient WhatsApp Number',
+        inputPlaceholder: '6281234567890',
+        showCancelButton: true,
+        confirmButtonColor: '#115E59',
+        inputValidator: (value) => {
+            if (!value) return 'Please enter phone number';
+        }
+    });
+    
+    if (!phone) return;
+    
+    Swal.fire({
+        title: 'Sending...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const res = await fetch('/admin/api/whatsapp/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: phone })
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sent!',
+                text: 'Test message sent successfully',
+                confirmButtonColor: '#115E59'
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadConfiguration();
+    loadStatus();
+    loadHealth();
+    
+    // Auto refresh status every 30 seconds
+    setInterval(loadStatus, 30000);
+});
+</script>
+{% endblock %}

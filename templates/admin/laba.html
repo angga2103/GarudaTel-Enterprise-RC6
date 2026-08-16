@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Laporan Laba · Admin{% endblock %}
+{% block body %}
+<main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Laporan Pendapatan</h1>
+      <p class="text-sm text-slate-600 mt-1">Pantau transaksi dan keuntungan bersih Anda di sini.</p>
+    </div>
+    <a href="/admin" class="px-5 py-2.5 bg-slate-50/50 text-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-100 transition">← Kembali ke Admin</a>
+  </div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-soft">
+      <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Transaksi Hari Ini</h2>
+      <div class="space-y-4">
+        <div class="flex justify-between text-sm"><span class="text-slate-600 font-medium">Transaksi Sukses</span> <span class="font-bold text-[#115E59]">{{ stats.today.trx }} Trx</span></div>
+        <div class="flex justify-between text-sm"><span class="text-slate-600 font-medium">Omzet / Uang Masuk</span> <span class="font-bold text-[#115E59]">Rp {{ '{:,.0f}'.format(stats.today.omzet).replace(',', '.') }}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-slate-600 font-medium">Modal ke Digiflazz</span> <span class="font-bold text-rose-600">Rp {{ '{:,.0f}'.format(stats.today.modal).replace(',', '.') }}</span></div>
+        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+          <span class="text-sm font-bold text-[#115E59]">Laba Bersih</span>
+          <span class="text-2xl font-bold text-emerald-600">Rp {{ '{:,.0f}'.format(stats.today.laba).replace(',', '.') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-soft relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -z-10"></div>
+      <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-5">Bulan Ini</h2>
+      <div class="space-y-4">
+        <div class="flex justify-between text-sm"><span class="text-slate-600 font-medium">Transaksi Sukses</span> <span class="font-bold text-[#115E59]">{{ stats.month.trx }} Trx</span></div>
+        <div class="flex justify-between text-sm"><span class="text-slate-600 font-medium">Omzet / Uang Masuk</span> <span class="font-bold text-[#115E59]">Rp {{ '{:,.0f}'.format(stats.month.omzet).replace(',', '.') }}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-slate-600 font-medium">Modal ke Digiflazz</span> <span class="font-bold text-rose-600">Rp {{ '{:,.0f}'.format(stats.month.modal).replace(',', '.') }}</span></div>
+        <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+          <span class="text-sm font-bold text-[#115E59]">Laba Bersih</span>
+          <span class="text-2xl font-bold text-emerald-600">Rp {{ '{:,.0f}'.format(stats.month.laba).replace(',', '.') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-[#115E59] p-6 rounded-2xl shadow-soft text-white relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full -z-0"></div>
+      <h2 class="text-xs font-bold text-teal-300 uppercase tracking-wider mb-5 relative z-10">Total Keseluruhan</h2>
+      <div class="space-y-4 relative z-10">
+        <div class="flex justify-between text-sm"><span class="text-teal-300 font-medium">Transaksi Sukses</span> <span class="font-bold">{{ stats.all.trx }} Trx</span></div>
+        <div class="flex justify-between text-sm"><span class="text-teal-300 font-medium">Total Omzet</span> <span class="font-bold">Rp {{ '{:,.0f}'.format(stats.all.omzet).replace(',', '.') }}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-teal-300 font-medium">Total Modal</span> <span class="font-bold text-rose-400">Rp {{ '{:,.0f}'.format(stats.all.modal).replace(',', '.') }}</span></div>
+        <div class="pt-4 border-t border-teal-700 flex justify-between items-center">
+          <span class="text-sm font-bold">Total Laba</span>
+          <span class="text-2xl font-bold text-emerald-400">Rp {{ '{:,.0f}'.format(stats.all.laba).replace(',', '.') }}</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

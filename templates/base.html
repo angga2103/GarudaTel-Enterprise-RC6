@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 50:'#f8fafc', 100:'#f1f5f9', 200:'#e2e8f0', 300:'#cbd5e1', 400:'#94a3b8', 500:'#64748b', 600:'#475569', 700:'#334155', 800:'#1e293b', 900:'#0f172a' },
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          boxShadow: {
+            'soft': '0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.04)',
+            'lift': '0 4px 24px rgba(15,23,42,0.06)',
+          },
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .scrollbar-none::-webkit-scrollbar { display: none; }
+    .scrollbar-none { scrollbar-width: none; }
+    .swal2-popup { font-family: 'Inter', system-ui, sans-serif !important; border-radius: 18px !important; padding: 1.5rem 1.25rem !important; }
+    .swal2-title { font-weight: 700 !important; font-size: 1.05rem !important; color: #0f172a !important; padding-top: .25rem !important; }
+    .swal2-html-container { font-size: .875rem !important; color: #475569 !important; margin-top: .35rem !important; }
+    .swal2-actions { gap: .5rem; margin-top: 1.1rem !important; }
+    .swal2-styled { box-shadow: none !important; font-weight: 600 !important; border-radius: 12px !important; padding: .55rem 1.1rem !important; font-size: .875rem !important; }
+    .swal2-styled.swal2-confirm { background: #0f172a !important; }
+    .swal2-styled.swal2-confirm:hover { background: #1e293b !important; }
+    .swal2-styled.swal2-cancel { background: #f1f5f9 !important; color: #334155 !important; }
+    .swal2-icon { width: 3rem !important; height: 3rem !important; border-width: 2px !important; margin: .5rem auto .25rem !important; }
+    .swal2-icon .swal2-icon-content { font-size: 1.5rem !important; }
+    .swal2-input, .swal2-select, .swal2-textarea { border-radius: 10px !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; font-size: .875rem !important; }
+    .swal2-toast { box-shadow: 0 4px 24px rgba(15,23,42,.08) !important; border: 1px solid #e2e8f0 !important; border-radius: 14px !important; padding: .65rem .9rem !important; }
+    .swal2-toast .swal2-title { font-size: .85rem !important; font-weight: 600 !important; }
+    .swal2-toast .swal2-icon { width: 1.5rem !important; height: 1.5rem !important; margin: 0 .65rem 0 .15rem !important; border-width: 0 !important; }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    details[open] .chev { transform: rotate(180deg); }
+    .chev { transition: transform .2s ease; }
+  </style>
+  {% block head %}{% endblock %}
+
+  <style>
+    /* Gembok Anti-Zoom Double Tap & Kunci Ukuran Font Input */
+    html, body {
+      touch-action: manipulation !important;
+      -webkit-text-size-adjust: 100% !important;
+    }
+    /* Mencegah layar lompat/zoom saat mengetik di kolom pencarian/nomor HP */
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  </style>
+
+  {% if current_user.is_authenticated and current_user.theme_color %}
+  <style>
+    /* Global Theme Override untuk Tailwind */
+    .text-\[\#115E59\] { color: {{ current_user.theme_color }} !important; }
+    .bg-\[\#115E59\] { background-color: {{ current_user.theme_color }} !important; }
+    .border-\[\#115E59\] { border-color: {{ current_user.theme_color }} !important; }
+    .ring-\[\#115E59\] { --tw-ring-color: {{ current_user.theme_color }} !important; }
+    .focus\:ring-\[\#115E59\]\/10:focus { --tw-ring-color: {{ current_user.theme_color }}1a !important; }
+    .focus\:border-\[\#115E59\]:focus { border-color: {{ current_user.theme_color }} !important; }
+  </style>
+  {% endif %}
+</head>
+<body class="bg-transparent/50 text-[#115E59] min-h-screen">
+
+    <div id="mesh-bg" class="fixed inset-0 z-[-1] bg-[#FCFDFD] pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 opacity-50" style="background-size: 32px 32px; background-image: linear-gradient(to right, rgba(17, 94, 89, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(17, 94, 89, 0.05) 1px, transparent 1px);"></div>
+        
+        <div class="absolute -top-32 -left-32 w-[500px] h-[500px] bg-teal-100/50 rounded-full blur-[120px]"></div>
+        <div class="absolute top-1/4 -right-32 w-[600px] h-[600px] bg-[#E0F2F1] rounded-full blur-[150px]"></div>
+        <div class="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-teal-50/60 rounded-full blur-[100px]"></div>
+    </div>
+
+  {% block body %}{% endblock %}
+  <script>
+    const Toast = Swal.mixin({
+      toast: true, position: 'top-end', showConfirmButton: false,
+      timer: 2800, timerProgressBar: true,
+      didOpen: (t) => { t.addEventListener('mouseenter', Swal.stopTimer); t.addEventListener('mouseleave', Swal.resumeTimer); }
+    });
+    function notifySuccess(msg) { Toast.fire({icon:'success', title: msg}); }
+    function notifyError(msg)   { Toast.fire({icon:'error',   title: msg}); }
+    function notifyInfo(msg)    { Toast.fire({icon:'info',    title: msg}); }
+    function rupiah(n) { return 'Rp ' + (Number(n)||0).toLocaleString('id-ID'); }
+    
+    // 🔥 INI KURIR YANG TADI TERHAPUS, SUDAH SAYA KEMBALIKAN! 🔥
+    async function postJSON(url, data) {
+      // Get CSRF token from meta tag
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      // Add CSRF token header if available
+      if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+      }
+      
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(data || {}),
+        credentials: 'same-origin',
+      });
+      let body = {};
+      try { body = await r.json(); } catch (_) {}
+      return { ok: r.ok, status: r.status, body };
+    }
+    
+    async function copyText(text, label) {
+      try {
+        await navigator.clipboard.writeText(text);
+        notifySuccess((label || 'Tersalin') + ' ke clipboard');
+      } catch (_) {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); notifySuccess((label || 'Tersalin') + ' ke clipboard'); }
+        catch(e) { notifyError('Gagal menyalin'); }
+        document.body.removeChild(ta);
+      }
+    }
+
+    // 🔥 PWA LOGIC (DEWABIZ STYLE PAKAI SWEETALERT) 🔥
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Muncul 1.5 detik setelah web terbuka
+      setTimeout(() => {
+          Swal.fire({
+            title: 'Instal GarudaTell',
+            text: 'Tambahkan ke layar utama untuk akses instan tanpa browser!',
+            imageUrl: '/static/assets/images/icons/icon-192x192.png',
+            imageWidth: 64,
+            imageHeight: 64,
+            showCancelButton: true,
+            confirmButtonText: 'Instal Sekarang',
+            cancelButtonText: 'Nanti Saja',
+            reverseButtons: true
+          }).then((result) => {
+            if (result.isConfirmed && deferredPrompt) {
+              deferredPrompt.prompt();
+              deferredPrompt = null;
+            }
+          });
+      }, 1500); 
+    });
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  
+    // FUNGSI MATA GLOBAL UNTUK SWEETALERT
+    window.toggleUserPass = function(id) {
+        const input = document.getElementById(id);
+        const icon = document.getElementById('icon_' + id);
+        if(!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            if(icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>';
+        } else {
+            input.type = 'password';
+            if(icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+        }
+    };
+
+  </script>
+  {% block scripts %}{% endblock %}
+
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDRpv8BvnEYVimozbvfNxJWlhAtMqf7ZWs",
+    authDomain: "garudaltell.firebaseapp.com",
+    projectId: "garudaltell",
+    storageBucket: "garudaltell.firebasestorage.app",
+    messagingSenderId: "528124989420",
+    appId: "1:528124989420:web:b4b3677c568566808d3ac9"
+  };
+  
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+
+  // Meminta Izin Notifikasi
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then(function(registration) {
+        console.log('Service Worker terdaftar!');
+        
+        messaging.getToken({ 
+          serviceWorkerRegistration: registration,
+          vapidKey: 'BKm3S9ufo7mkk1oOCGZNq6elDlF23JFFQTC8pNAm4ZHdVNRXjNwcRomgaozA2ZW8_Jhk2QtxzJZIXosnFMqS9ic' 
+        }).then((currentToken) => {
+          if (currentToken) {
+            console.log('Token Berhasil Didapat!');
+            // Simpan token ke server agar admin bisa kirim notif
+            fetch('/update-fcm-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: currentToken })
+            });
+          }
+        });
+      });
+  }
+
+  // Handle notifikasi saat aplikasi sedang dibuka (Foreground)
+  messaging.onMessage((payload) => {
+    console.log('Notifikasi Masuk:', payload);
+    Swal.fire({
+      title: payload.notification.title,
+      text: payload.notification.body,
+      icon: 'info',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 5000
+    });
+  });
+</script>
+
+</body>
+</html>

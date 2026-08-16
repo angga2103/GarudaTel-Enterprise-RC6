@@ -1,0 +1,292 @@
+============================================================================
+GARUDATEL ENTERPRISE - RELEASE NOTES
+Release Candidate 1 (RC1)
+Version: 2.0.0-RC1
+Date: August 7, 2026
+============================================================================
+
+OVERVIEW
+============================================================================
+
+GarudaTel Enterprise RC1 adalah sistem PPOB (Payment Point Online Bank)
+enterprise-grade dengan fokus pada stabilitas, keamanan, dan skalabilitas.
+
+Release Candidate ini merupakan versi production-ready yang telah melalui
+audit keamanan menyeluruh dan validasi operasional.
+
+============================================================================
+MAJOR MODULES
+============================================================================
+
+1. INSTALLER V2
+   - 11-phase production-grade installation system
+   - Automatic mode detection (fresh install / restore)
+   - Database backup before operations
+   - Automatic migration execution
+   - Multi-service orchestration (web_ppob, subscription_worker, telegram_listener)
+   - Health certification with 9-point verification
+   - Configuration foundation with passive provider validation
+   - Installation certification report with health score
+
+2. INTEGRATION CENTER
+   - Centralized provider configuration management
+   - Single source of truth: ConfigManager
+   - Supported providers:
+     * Digiflazz (PPOB products)
+     * PaymentKita (QRIS payment gateway)
+     * Pakasir (offline payment system)
+     * Telegram (bot notifications)
+     * Firebase (push notifications)
+     * Cloudflare (zero trust tunnel)
+     * WhatsApp (communication center)
+   - Test connection before save
+   - Real-time connection status
+   - Configuration backup with versioning
+   - Provider schema validation
+
+3. NOTIFICATION CENTER
+   - Enterprise-grade broadcast system
+   - Multi-channel delivery (Firebase, Telegram, WhatsApp)
+   - Target segmentation (all users, resellers, specific roles)
+   - Broadcast queue management
+   - Delivery status tracking
+   - Retry mechanism for failed notifications
+   - Notification history with analytics
+   - Database tables:
+     * notification_broadcasts
+     * notification_queue
+     * notification_channels
+
+4. TELEGRAM NAVIGATION FRAMEWORK
+   - Modern inline keyboard navigation
+   - Menu system:
+     * Broadcast management
+     * Banner & Promo management
+     * Close menu
+   - Secure access control (TELEGRAM_CHAT_ID validation)
+   - Callback query handling
+   - Message safety with Unicode error handling
+   - Clean UI with emoji icons
+
+5. WHATSAPP CENTER
+   - WhatsApp communication adapter
+   - API-based integration
+   - Message formatting and validation
+   - Error handling and retry logic
+   - Provider-agnostic architecture
+   - Ready for WhatsApp Business API
+
+6. CLOUDFLARE CENTER
+   - Zero Trust Tunnel integration
+   - Secure remote access without port forwarding
+   - Automatic HTTPS
+   - DDoS protection
+   - Global CDN network
+   - Configuration via Integration Center
+
+7. FIREBASE CENTER
+   - Push notification infrastructure
+   - Cloud Messaging integration
+   - Device token management
+   - Topic-based messaging
+   - Notification payload builder
+   - Error handling and logging
+
+============================================================================
+SECURITY PATCHES
+============================================================================
+
+SEC-003 through SEC-017 implemented:
+
+SEC-003: CSRF Protection
+  - Flask-WTF CSRFProtect enabled globally
+  - CSRF tokens in all forms
+  - Exemptions only for documented public APIs
+
+SEC-004: Rate Limiting
+  - Flask-Limiter integrated
+  - Per-route rate limiting
+  - Default limits: login (5/minute), deposit (10/minute)
+  - Memory-based storage
+
+SEC-005: Default PIN Remediation
+  - Force PIN change for users with default PIN '123456'
+  - Migration script: migrate_sec005_pin.py
+  - Flag: force_pin_change in users table
+
+SEC-006: PIN Encryption (bcrypt)
+  - All PINs hashed with bcrypt
+  - Automatic migration from plaintext
+  - Backward compatible verification
+  - Migration script: migrate_pins_to_bcrypt.py
+
+SEC-007 through SEC-017: Various security hardening
+  - Session security improvements
+  - Input validation enhancements
+  - SQL injection prevention
+  - XSS protection
+  - Secure password hashing
+  - Authentication improvements
+
+============================================================================
+ARCHITECTURE IMPROVEMENTS
+============================================================================
+
+Configuration Management:
+  - ConfigManager as single source of truth
+  - Provider schema registry
+  - Dirty state tracking
+  - Automatic backup before updates
+  - Checksum verification
+  - Version control for configurations
+
+Service Architecture:
+  - Multi-service design:
+    * web_ppob: Main Flask application
+    * subscription_worker: Background subscription processor
+    * telegram_listener: Telegram bot (optional)
+  - Systemd integration
+  - Automatic restart on failure
+  - Service dependencies managed
+  - Health monitoring
+
+Database Management:
+  - SQLite with WAL mode
+  - Foreign key enforcement
+  - Automatic migrations
+  - Backup before operations
+  - Integrity verification
+  - Transaction safety
+
+============================================================================
+OPERATIONAL FEATURES
+============================================================================
+
+Auto-Subscription System:
+  - Automatic recurring transactions
+  - Schedule management (daily, weekly, monthly)
+  - Balance validation before execution
+  - Provider submission
+  - Success/failure tracking
+  - Automatic retry on failure
+
+Auto-Backup:
+  - Cron-based scheduled backups (every 2 hours)
+  - Telegram delivery
+  - Database snapshot
+  - Configuration backup
+  - Backup metadata tracking
+
+Monitoring & Logging:
+  - Service logs via journalctl
+  - Application logs in paypoint directory
+  - Transaction logging
+  - Provider API logging (digiflazz_logs table)
+  - Error tracking
+
+============================================================================
+KNOWN LIMITATIONS
+============================================================================
+
+1. Single Server Architecture
+   - Current version designed for single-server deployment
+   - Horizontal scaling requires additional architecture
+   - Database: SQLite (suitable for small to medium traffic)
+   - For high-traffic scenarios, consider PostgreSQL migration
+
+2. WhatsApp Integration
+   - Requires external WhatsApp Business API provider
+   - Not included: WhatsApp Business API subscription
+   - Configuration must be done via Integration Center
+
+3. Firebase Push Notifications
+   - Requires firebase_credentials.json from Firebase Console
+   - Manual upload required
+   - Device token registration managed by client application
+
+4. Backup Storage
+   - Automatic backups sent via Telegram
+   - Local backup retention not automated
+   - Manual cleanup required for disk space management
+
+5. Cloudflare Tunnel
+   - Requires Cloudflare account
+   - Tunnel token must be obtained from Cloudflare Dashboard
+   - One-time manual configuration during installation
+
+============================================================================
+SYSTEM REQUIREMENTS
+============================================================================
+
+Server:
+  - OS: Ubuntu 20.04+ or Debian 11+
+  - RAM: 1GB minimum, 2GB recommended
+  - Disk: 2GB free space minimum
+  - Python: 3.8 or higher
+  - Internet: Required for installation and operations
+
+Dependencies (auto-installed):
+  - Flask >= 3.0
+  - Flask-Login >= 0.6
+  - Flask-WTF >= 1.2
+  - Flask-Limiter >= 3.5
+  - Authlib >= 1.3
+  - requests >= 2.32
+  - python-dotenv >= 1.0
+  - Werkzeug >= 3.0
+  - bcrypt >= 4.0
+
+============================================================================
+INSTALLATION
+============================================================================
+
+See INSTALL_GUIDE.txt for detailed installation instructions.
+
+Quick start:
+  1. Upload GarudaTel_Enterprise_RC1.zip to server
+  2. Extract to /root/web_ppob/paypoint/
+  3. Run: chmod +x installer_vps_baru.sh
+  4. Run: ./installer_vps_baru.sh
+  5. Follow prompts
+  6. Configure providers via Integration Center
+
+============================================================================
+UPGRADE PATH
+============================================================================
+
+From previous versions:
+  - Backup existing database and .env
+  - Stop all services
+  - Extract new version
+  - Run installer (will detect restore mode)
+  - Verify all services running
+  - No provider reconfiguration needed
+
+============================================================================
+NEXT RELEASE
+============================================================================
+
+Planned for RC2 / Final Release:
+  - Performance optimization
+  - Additional provider integrations
+  - Enhanced analytics dashboard
+  - Multi-branch support
+  - Advanced reporting features
+  - API documentation
+
+============================================================================
+SUPPORT & FEEDBACK
+============================================================================
+
+This is a Release Candidate intended for production validation.
+
+Please report any issues encountered during:
+  - Installation process
+  - Provider configuration
+  - Transaction processing
+  - Service stability
+  - Integration Center operations
+
+============================================================================
+END OF RELEASE NOTES
+============================================================================

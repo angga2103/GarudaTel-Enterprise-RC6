@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}{{ kategori }} · {{ APP_NAME }}{% endblock %}
+{% block body %}
+{% include '_navbar_user.html' %}
+<main class="w-full md:max-w-3xl mx-auto bg-slate-50 min-h-screen pb-24">
+  <div class="bg-[#115E59] text-white p-5 rounded-b-3xl shadow-md">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="{{ url_for('user.dashboard') }}" class="text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>
+      <h1 class="text-xl font-bold tracking-wide">{{ kategori }}</h1>
+    </div>
+    <p class="text-sm text-teal-100/80 ml-9">Masukkan nomor tujuan untuk melanjutkan</p>
+  </div>
+
+  
+
+  <div id="emoney-tabs" class="hidden px-4 mt-4 relative z-20">
+    <div class="grid grid-cols-4 gap-2">
+      <button onclick="pilihEMoney('DANA')" id="btn-DANA" class="emoney-btn bg-white border rounded-xl p-3 flex flex-col items-center justify-center h-14 transition shadow-sm"><span class="text-[#008ced] font-black italic text-lg">DANA</span></button>
+      <button onclick="pilihEMoney('GO-PAY')" id="btn-GO-PAY" class="emoney-btn bg-white border rounded-xl p-3 flex flex-col items-center justify-center h-14 transition shadow-sm"><span class="text-[#00addc] font-black text-lg">go<span class="text-[#00addc]/60">pay</span></span></button>
+      <button onclick="pilihEMoney('SHOPEE')" id="btn-SHOPEE" class="emoney-btn bg-white border rounded-xl p-3 flex flex-col items-center justify-center h-14 transition shadow-sm"><span class="text-[#ee4d2d] font-black text-xs text-center">Shopee<br><span class="text-[8px] uppercase">Pay</span></span></button>
+      <button onclick="pilihEMoney('OVO')" id="btn-OVO" class="emoney-btn bg-white border rounded-xl p-3 flex flex-col items-center justify-center h-14 transition shadow-sm"><span class="text-[#4c2a86] font-black italic text-lg">OVO</span></button>
+    </div>
+  </div>
+
+  <div class="px-4 mt-4 relative z-10">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden"><svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
+      <div class="flex-1">
+        <label id="input-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nomor HP Tujuan</label>
+        <input type="tel" id="nomor_hp" class="w-full font-semibold text-lg text-slate-800 focus:outline-none placeholder-slate-300 mt-0.5 bg-transparent" placeholder="0812..." autocomplete="off">
+      </div>
+      <div id="loading-spinner" class="hidden text-[#115E59]"><svg class="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>
+    </div>
+  </div>
+
+  
+  <div id="area-cek-tagihan" class="hidden px-4 mt-6">
+      <button id="btn-cek-tagihan" class="w-full bg-[#115E59] text-white font-bold py-3.5 rounded-xl shadow-md shadow-teal-500/30 hover:bg-teal-800 transition active:scale-95 flex justify-center items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          CEK TAGIHAN LISTRIK
+      </button>
+  </div>
+
+  <div class="px-4 mt-6 space-y-3" id="daftar_produk">
+    <div class="text-center text-slate-400 text-sm mt-10" id="pesan_kosong">Ketik nomor untuk melihat paket</div>
+  </div>
+</main>
+
+
+<script>
+  const KATEGORI = "{{ kategori }}";
+  const inputNomor = document.getElementById('nomor_hp');
+  const daftarProduk = document.getElementById('daftar_produk');
+  const pesanKosong = document.getElementById('pesan_kosong');
+  const loading = document.getElementById('loading-spinner');
+  
+  const plnTabs = document.getElementById('pln-tabs');
+  const emoneyTabs = document.getElementById('emoney-tabs');
+  const inputLabel = document.getElementById('input-label');
+  
+  const tabToken = document.getElementById('tab-token');
+  const tabTagihan = document.getElementById('tab-tagihan');
+  const areaCekTagihan = document.getElementById('area-cek-tagihan');
+  const btnCekTagihan = document.getElementById('btn-cek-tagihan');
+  
+  let currentProvider = "";
+  let isPascabayar = false;
+  let selectedEMoney = "";
+
+  // Munculkan Tab PLN jika Kategorinya Token-PLN / PLN
+  if (KATEGORI.toUpperCase().includes("PLN")) {
+    if(plnTabs) plnTabs.classList.remove('hidden');
+    inputLabel.innerText = "Nomor Meter / ID Pelanggan";
+  } else if (KATEGORI.toUpperCase().includes("E-MONEY") || KATEGORI.toUpperCase().includes("E MONEY")) {
+    if(emoneyTabs) emoneyTabs.classList.remove('hidden');
+    inputLabel.innerText = "Nomor HP Akun";
+  }
+
+  // --- LOGIKA KLIK TAB PLN ---
+  if(tabToken && tabTagihan) {
+      tabToken.addEventListener('click', () => {
+        isPascabayar = false;
+        
+        // Ganti Warna Tombol
+        tabToken.classList.add('bg-[#115E59]', 'text-white');
+        tabToken.classList.remove('bg-transparent', 'text-slate-500');
+        tabTagihan.classList.add('bg-transparent', 'text-slate-500');
+        tabTagihan.classList.remove('bg-[#115E59]', 'text-white');
+        
+        inputLabel.innerText = "Nomor Meter (Token Prabayar)";
+        
+        // Sembunyikan tombol cek tagihan, Munculkan area daftar produk
+        if(areaCekTagihan) areaCekTagihan.classList.add('hidden');
+        if(daftarProduk) daftarProduk.classList.remove('hidden');
+        
+        // Triger pencarian otomatis jika nomor sudah diketik
+        inputNomor.dispatchEvent(new Event('input')); 
+      });
+
+      tabTagihan.addEventListener('click', () => {
+        isPascabayar = true;
+        
+        // Ganti Warna Tombol
+        tabTagihan.classList.add('bg-[#115E59]', 'text-white');
+        tabTagihan.classList.remove('bg-transparent', 'text-slate-500');
+        tabToken.classList.add('bg-transparent', 'text-slate-500');
+        tabToken.classList.remove('bg-[#115E59]', 'text-white');
+        
+        inputLabel.innerText = "ID Pelanggan (Tagihan Pascabayar)";
+        
+        // Sembunyikan daftar produk, Munculkan tombol CEK TAGIHAN
+        if(daftarProduk) daftarProduk.classList.add('hidden');
+        if(areaCekTagihan) areaCekTagihan.classList.remove('hidden');
+      });
+  }
+
+  // --- LOGIKA KLIK LOGO E-MONEY ---
+  function pilihEMoney(provider) {
+    selectedEMoney = provider;
+    document.querySelectorAll('.emoney-btn').forEach(btn => {
+       btn.classList.remove('border-[#115E59]', 'bg-teal-50', 'ring-2', 'ring-teal-500/30');
+    });
+    const activeBtn = document.getElementById('btn-'+provider);
+    if(activeBtn) activeBtn.classList.add('border-[#115E59]', 'bg-teal-50', 'ring-2', 'ring-teal-500/30');
+    
+    if (inputNomor.value.replace(/[^0-9]/g, '').length >= 4) { fetchProduk(provider); }
+  }
+
+  // --- LOGIKA SAAT NOMOR DIKETIK ---
+  inputNomor.addEventListener('input', function() {
+    let val = this.value.replace(/[^0-9]/g, ''); this.value = val;
+    
+    // JIKA MODE TAGIHAN LISTRIK, JANGAN LAKUKAN PENCARIAN PRODUK OTOMATIS!
+    if (isPascabayar) return;
+    
+    if (KATEGORI.toUpperCase().includes("PLN") && val.length >= 4) { 
+        if(currentProvider !== "PLN") { currentProvider = "PLN"; fetchProduk("PLN"); }
+    } else if ((KATEGORI.toUpperCase().includes("E-MONEY") || KATEGORI.toUpperCase().includes("E MONEY")) && selectedEMoney && val.length >= 4) { 
+        if(currentProvider !== selectedEMoney) { currentProvider = selectedEMoney; fetchProduk(selectedEMoney); }
+    } else if (val.length >= 4 && !KATEGORI.toUpperCase().includes("E-MONEY") && !KATEGORI.toUpperCase().includes("PLN")) {
+       let p = val.substring(0,4); let prov = "";
+       let p5 = val.substring(0,5);
+       if(['08515','08517','08518'].includes(p5)) { prov="by.U"; p="by.U"; }
+       else if(['0811','0812','0813','0821','0822','0823','0852','0853','0851'].includes(p)) prov="TELKOMSEL";
+       if(['0814','0815','0816','0855','0856','0857','0858'].includes(p)) prov="INDOSAT";
+       if(['0817','0818','0819','0859','0877','0878'].includes(p)) prov="XL";
+       if(['0831','0832','0833','0838'].includes(p)) prov="AXIS";
+       if(['0895','0896','0897','0898','0899'].includes(p)) prov="TRI";
+       if(['0881','0882','0883','0884','0885','0886','0887','0888','0889'].includes(p)) prov="SMARTFREN";
+       if(prov && prov !== currentProvider) { currentProvider = prov; fetchProduk(prov); }
+    } else if (val.length < 4) {
+       currentProvider = ""; if(daftarProduk) { daftarProduk.innerHTML = ''; daftarProduk.appendChild(pesanKosong); pesanKosong.style.display = 'block'; }
+    }
+  });
+
+  // --- FUNGSI CARI PRODUK (PRABAYAR) ---
+  async function fetchProduk(provider) {
+    if(pesanKosong) pesanKosong.style.display = 'none';
+    if(loading) loading.classList.remove('hidden');
+    try {
+      let res = await fetch(`/api/v2/products?provider=${provider}&category=${KATEGORI}`);
+      let json = await res.json();
+      if(loading) loading.classList.add('hidden');
+      if(daftarProduk) daftarProduk.innerHTML = '';
+      if (!json.data || json.data.length === 0) { if(daftarProduk) daftarProduk.innerHTML = '<div class="text-center text-sm text-slate-500 mt-5">Produk tidak tersedia</div>'; return; }
+      
+      json.data.forEach(p => {
+        let encDesc = encodeURIComponent(p.desc || '');
+        let hargaHtml = p.is_reseller ? 
+          `<div class="text-[10px] text-slate-400 line-through">Rp ${p.harga_member.toLocaleString('id-ID')}</div><div class="text-lg font-bold text-[#115E59]">Rp ${p.harga_reseller.toLocaleString('id-ID')}</div>` :
+          `<div class="text-xs text-slate-500">Rp ${p.harga_member.toLocaleString('id-ID')}</div><div class="text-sm font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded inline-block mt-1">🔥 Reseller: Rp ${p.harga_reseller.toLocaleString('id-ID')}</div>`;
+        
+        if(daftarProduk) {
+            let kotakProduk = '';
+            // Jika is_active bernilai 0 (Gangguan / Nonaktif)
+            if (p.is_active == 0 || p.is_active === false || p.is_active === '0') {
+                kotakProduk = `<div class="bg-slate-50 p-4 rounded-2xl border border-rose-200 relative overflow-hidden opacity-80 cursor-not-allowed">
+                    <div class="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm">Gangguan</div>
+                    <div class="font-semibold text-slate-500 text-sm pr-16">${p.nama_rapi}</div>
+                    <div class="flex justify-between items-end mt-3">
+                        <div>${hargaHtml}</div>
+                        <div class="text-xs font-semibold text-rose-500 bg-rose-100 px-3 py-1.5 rounded-lg">Stok Kosong</div>
+                    </div>
+                </div>`;
+            } else {
+            // Jika Normal
+                kotakProduk = `<div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hover:border-[#115E59] transition cursor-pointer" onclick="beli('${p.id}', '${p.nama_rapi}', ${p.harga_final}, '${encDesc}')">
+                    <div class="font-semibold text-slate-800 text-sm">${p.nama_rapi}</div>
+                    <div class="flex justify-between items-end mt-3">
+                        <div>${hargaHtml}</div>
+                        <button class="bg-slate-100 hover:bg-[#115E59] hover:text-white transition-colors text-[#115E59] font-medium text-xs px-4 py-2 rounded-xl shadow-sm">Beli</button>
+                    </div>
+                </div>`;
+            }
+            daftarProduk.innerHTML += kotakProduk;
+        }
+      });
+    } catch (e) { if(loading) loading.classList.add('hidden'); }
+  }
+
+  // --- FUNGSI BELI (PRABAYAR) ---
+  function beli(id, nama, harga, encDesc) {
+    let desc = decodeURIComponent(encDesc);
+    Swal.fire({
+      title: 'Konfirmasi Pembelian',
+      html: `<div class="text-left text-sm bg-slate-50 p-3 rounded-lg border">
+          <div class="flex justify-between mb-1"><span class="text-slate-500">Produk:</span> <b>${nama}</b></div>
+          <div class="flex justify-between mb-1"><span class="text-slate-500">Nomor:</span> <b>${inputNomor.value}</b></div>
+          <div class="flex justify-between mt-2 pt-2 border-t"><span class="text-slate-500">Total:</span> <b class="text-[#115E59] text-base">Rp ${harga.toLocaleString('id-ID')}</b></div>
+          ${desc ? `<div class="mt-2 pt-2 border-t text-xs text-slate-500 bg-slate-100 p-2 rounded whitespace-pre-line">${desc}</div>` : ''}
+        </div><input type="password" id="swal-pin" class="w-full border rounded-xl px-3 py-2 text-center mt-3 tracking-widest font-bold" placeholder="PIN" maxlength="6">`,
+      showCancelButton: true, confirmButtonText: 'Bayar Sekarang', confirmButtonColor: '#115E59', cancelButtonText: 'Batal',
+      preConfirm: () => { const pin = document.getElementById('swal-pin').value; if (!pin) { Swal.showValidationMessage('PIN wajib diisi'); return false; } return pin; }
+    }).then(async (result) => {
+      if(result.isConfirmed) {
+        Swal.fire({title: 'Memproses...', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
+        let res = await fetch("{{ url_for('user.buy') }}", {
+           method: "POST", headers: {"Content-Type": "application/json"},
+           body: JSON.stringify({ product_id: id, target: inputNomor.value, pin: result.value })
+        }).then(r => r.json());
+        if (res.ok && res.status === 'success') { Swal.fire({icon: 'success', title: 'Berhasil!', html: `SN/Token:<br><b class="text-2xl text-[#115E59] tracking-widest block mt-2 bg-teal-50 p-2 rounded-lg border border-teal-100 select-all">${res.sn || '-'}</b>`}); }
+        else if (res.ok && res.status === 'pending') { Swal.fire({icon: 'info', title: 'Diproses', text: 'Sedang diproses server.'}); }
+        else { Swal.fire({icon: 'error', title: 'Gagal', text: res.error || 'Terjadi kesalahan'}); }
+      }
+    });
+  }
+
+  // --- FUNGSI CEK & BAYAR TAGIHAN (PASCABAYAR) ---
+  if(btnCekTagihan) {
+      btnCekTagihan.addEventListener('click', async () => {
+          const target = inputNomor.value;
+          if(target.length < 4) return Swal.fire('Oops', 'Masukkan ID Pelanggan yang benar', 'error');
+          
+          Swal.fire({title: 'Mengecek Tagihan...', text: 'Menghubungkan ke server PLN...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+          
+          try {
+              const res = await fetch("{{ url_for('user.inquiry_api') }}", {
+                  method: "POST", headers: {"Content-Type": "application/json"},
+                  body: JSON.stringify({ sku: "PLNPOST", target: target }) 
+              }).then(r => r.json());
+              
+              if (res.ok) {
+                  Swal.fire({
+                      title: 'Rincian Tagihan Listrik',
+                      html: `
+                        <div class="text-left text-sm bg-slate-50 p-3 rounded-lg mb-3 border border-slate-200">
+                          <div class="flex justify-between mb-1"><span class="text-slate-500">Nama:</span> <b class="text-slate-800">${res.name}</b></div>
+                          <div class="flex justify-between mb-1"><span class="text-slate-500">ID Pel:</span> <b class="text-slate-800">${target}</b></div>
+                          <div class="flex justify-between mt-3 pt-3 border-t"><span class="text-slate-500">Total Bayar:</span> <b class="text-[#115E59] text-lg">Rp ${res.amount.toLocaleString('id-ID')}</b></div>
+                        </div>
+                        <input type="password" id="swal-pin-pasca" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-center tracking-widest font-bold" placeholder="Masukkan PIN Transaksi" maxlength="6">
+                      `,
+                      showCancelButton: true, confirmButtonText: 'Bayar Sekarang', confirmButtonColor: '#115E59', cancelButtonText: 'Batal',
+                      preConfirm: () => {
+                        const pin = document.getElementById('swal-pin-pasca').value;
+                        if (!pin) { Swal.showValidationMessage('PIN Transaksi wajib diisi'); return false; }
+                        return pin;
+                      }
+                  }).then(async (result) => {
+                      if(result.isConfirmed) {
+                          // Lanjut Bayar Pascabayar
+                          Swal.fire({title: 'Membayar Tagihan...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+                          let resBayar = await fetch("{{ url_for('user.buy') }}", {
+                             method: "POST", headers: {"Content-Type": "application/json"},
+                             body: JSON.stringify({ is_postpaid: true, sku: "PLNPOST", amount: res.amount, name: "Tagihan Listrik Pascabayar", target: target, pin: result.value })
+                          }).then(r => r.json());
+                          
+                          if (resBayar.ok && resBayar.status === 'success') {
+                             Swal.fire({icon: 'success', title: 'Lunas!', html: `Tagihan PLN Berhasil Dibayar!<br>Ref ID: <b>${resBayar.sn || '-'}</b>`});
+                          } else if (resBayar.ok && resBayar.status === 'pending') {
+                             Swal.fire({icon: 'info', title: 'Diproses', text: 'Pembayaran sedang diproses. Silakan cek menu Riwayat.'});
+                          } else {
+                             Swal.fire({icon: 'error', title: 'Gagal', text: resBayar.error || 'Terjadi kesalahan server.'});
+                          }
+                      }
+                  });
+              } else {
+                  Swal.fire('Informasi', res.error || 'Tagihan tidak ditemukan atau sudah lunas.', 'info');
+              }
+          } catch(e) {
+              Swal.fire('Error', 'Gagal terhubung ke server', 'error');
+          }
+      });
+  }
+</script>
+
+{% endblock %}

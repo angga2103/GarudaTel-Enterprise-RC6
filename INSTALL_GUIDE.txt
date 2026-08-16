@@ -1,0 +1,191 @@
+============================================================
+GARUDATEL ENTERPRISE RC6 FIXED
+INSTALLATION GUIDE
+============================================================
+
+CARA INSTALL (ONE COMMAND)
+============================================================
+
+STEP 1 — Upload ZIP ke VPS
+
+  Upload file ZIP ke /root/ menggunakan SCP atau SFTP:
+
+    scp GarudaTel_Enterprise_RC6_FIXED.zip root@IP-VPS:/root/
+
+  Pastikan file ada di:
+
+    /root/GarudaTel_Enterprise_RC6_FIXED.zip
+
+------------------------------------------------------------
+
+STEP 2 — Upload installer ke VPS
+
+  Upload file install_rc6.sh ke /root/:
+
+    scp install_rc6.sh root@IP-VPS:/root/
+
+------------------------------------------------------------
+
+STEP 3 — Jalankan installer
+
+  Sambungkan SSH ke VPS:
+
+    ssh root@IP-VPS
+
+  Jalankan SATU perintah:
+
+    bash /root/install_rc6.sh
+
+  Installer otomatis:
+    - Mendeteksi dan mengekstrak ZIP
+    - Mendeteksi struktur folder (nested atau flat)
+    - Menempatkan project ke /root/web_ppob/paypoint/
+    - Menginstall semua dependency
+    - Membuat database
+    - Membuat systemd service
+    - Menjalankan Gunicorn di 0.0.0.0:2100
+    - Melakukan health check
+    - Menampilkan URL testing
+
+  Tunggu hingga muncul:
+
+    Status: SERVER READY
+
+------------------------------------------------------------
+
+STEP 4 — Buka browser
+
+  Akses aplikasi:
+
+    http://IP-VPS:2100
+
+  Halaman login akan muncul.
+
+------------------------------------------------------------
+
+STEP 5 — Login Admin
+
+  Username : admin
+  Password : admin123
+
+  PENTING: Ganti password segera setelah login pertama!
+  Admin Panel → Settings → Change Password
+
+============================================================
+KONFIGURASI CLOUDFLARE (OPTIONAL — SETELAH LOGIN)
+============================================================
+
+Cloudflare Tunnel BUKAN syarat agar aplikasi berjalan.
+Aplikasi sudah dapat diakses via http://IP-VPS:2100 tanpa
+Cloudflare.
+
+Untuk mengaktifkan Cloudflare Tunnel:
+
+  1. Login Admin Panel
+  2. Admin Panel → Cloudflare
+  3. Masukkan Tunnel Token (eyJh...)
+  4. Klik Save Token
+  5. Klik Aktifkan Tunnel
+  6. Verifikasi status: Connected
+
+============================================================
+CARA UNINSTALL (ONE COMMAND)
+============================================================
+
+  bash /root/uninstall_rc6.sh
+
+  Uninstaller HANYA menghapus komponen GarudaTel RC6.
+  Nginx, Xray, VPN, dan project lain TIDAK akan disentuh.
+
+============================================================
+VERIFIKASI MANUAL (OPSIONAL)
+============================================================
+
+Cek status service:
+
+  systemctl status web_ppob
+  systemctl status subscription_worker
+
+Cek port:
+
+  ss -lntp | grep ':2100'
+
+Cek HTTP response:
+
+  curl -I http://127.0.0.1:2100/
+
+Cek log:
+
+  journalctl -u web_ppob -n 50
+
+Cek database:
+
+  sqlite3 /root/web_ppob/paypoint/paypoint.db ".tables"
+
+============================================================
+KONFIGURASI PROVIDER (SETELAH LOGIN — OPTIONAL)
+============================================================
+
+Login Admin → Admin Panel → Integration Center
+
+  - Digiflazz  : PPOB (pulsa, PLN, data)
+  - PaymentKita: QRIS payment gateway
+  - Pakasir    : QRIS payment gateway (alternatif)
+  - Telegram   : Bot notifikasi + backup
+  - Firebase   : Push notification (FCM)
+  - WhatsApp   : WhatsApp gateway
+  - Cloudflare : Tunnel (akses via domain)
+
+Semua provider bersifat OPTIONAL untuk testing awal.
+
+============================================================
+TROUBLESHOOTING
+============================================================
+
+Service gagal start:
+  journalctl -u web_ppob -n 100
+  journalctl -u web_ppob --no-pager -l
+
+Port 2100 tidak listening:
+  ss -lntp | grep 2100
+  systemctl restart web_ppob
+
+Browser tidak bisa buka http://IP:2100:
+  - Pastikan firewall VPS membuka port 2100
+  - UFW: ufw allow 2100/tcp
+  - iptables: iptables -A INPUT -p tcp --dport 2100 -j ACCEPT
+
+Login berhasil tapi redirect ke login lagi:
+  - Pastikan SESSION_COOKIE_SECURE=0 di .env (bukan 1)
+  - cat /root/web_ppob/paypoint/.env | grep SESSION
+
+Database error:
+  sqlite3 /root/web_ppob/paypoint/paypoint.db "PRAGMA integrity_check;"
+
+Import error / ModuleNotFoundError:
+  cd /root/web_ppob/paypoint
+  source venv/bin/activate
+  python -c "from app import app; print('OK')"
+
+============================================================
+FILE LOKASI
+============================================================
+
+  Project    : /root/web_ppob/paypoint/
+  Database   : /root/web_ppob/paypoint/paypoint.db
+  Config     : /root/web_ppob/paypoint/.env
+  Venv       : /root/web_ppob/paypoint/venv/
+  Logs       : journalctl -u web_ppob -f
+
+============================================================
+PORT YANG DIGUNAKAN RC6
+============================================================
+
+  Port 2100 : GarudaTel RC6 (Gunicorn)
+
+  TIDAK menggunakan: 80, 443, 5000, 8080
+  TIDAK menyentuh  : Nginx, Xray, VPN project lain
+
+============================================================
+END OF INSTALLATION GUIDE
+============================================================

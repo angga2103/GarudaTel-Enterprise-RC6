@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+{% block title %}Cloudflare Zero Trust · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-5xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Cloudflare Zero Trust</h1>
+                <p class="text-sm text-slate-600 mt-1">Secure tunnel management dan remote access</p>
+            </div>
+            <a href="/admin/integration-center" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                ← Kembali
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Panel -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-bold text-[#115E59]">Status Panel</h2>
+            <div id="cloudflare-status-badge" class="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full">
+                Loading...
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Connection Status</div>
+                <div id="cf-connection-status" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Tunnel Status</div>
+                <div id="cf-tunnel-status" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Tunnel Name</div>
+                <div id="cf-tunnel-name" class="text-sm font-mono text-slate-800 truncate">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Last Check</div>
+                <div id="cf-last-check" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Public Hostname</div>
+                <div id="cf-hostname" class="text-sm font-mono text-slate-800 break-all">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Service</div>
+                <div id="cf-service" class="text-sm font-mono text-slate-800">-</div>
+            </div>
+        </div>
+
+        <div id="cf-error-container" class="mt-4 hidden">
+            <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div class="text-xs text-red-600 font-semibold uppercase tracking-wider mb-1">Last Error</div>
+                <div id="cf-last-error" class="text-sm text-red-700 font-mono"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Configuration</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Tunnel Token</label>
+                <textarea id="tunnel-token" rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#115E59] focus:ring-2 focus:ring-[#115E59]/20 transition-all" placeholder="eyJhIjoixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx..."></textarea>
+                <p class="mt-2 text-xs text-slate-500">Token dari Cloudflare Zero Trust Dashboard</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Tunnel Name (Optional)</label>
+                    <input type="text" id="tunnel-name" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#115E59] focus:ring-2 focus:ring-[#115E59]/20 transition-all" placeholder="garuda-tell-tunnel">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Account ID (Optional)</label>
+                    <input type="text" id="account-id" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-[#115E59] focus:ring-2 focus:ring-[#115E59]/20 transition-all" placeholder="xxxxxxxxxxxxx">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 mt-6">
+            <button onclick="saveConfiguration()" class="px-5 py-2.5 bg-[#115E59] hover:bg-[#165654] text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                Save
+            </button>
+            
+            <button onclick="testConnection()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Test Connection
+            </button>
+            
+            <button onclick="reloadConfiguration()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Reload
+            </button>
+        </div>
+    </div>
+
+    <!-- Setup Wizard -->
+    <div class="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-[24px] p-6 shadow-sm">
+        <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="flex-1">
+                <h2 class="text-lg font-bold text-blue-900 mb-1">Setup Wizard</h2>
+                <p class="text-sm text-blue-700">Ikuti langkah-langkah berikut untuk konfigurasi Cloudflare Tunnel</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Login ke Cloudflare Zero Trust Dashboard</div>
+                    <div class="text-sm text-blue-700 mt-1">Buka <a href="https://one.dash.cloudflare.com/" target="_blank" class="underline hover:text-blue-900">one.dash.cloudflare.com</a></div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Create Tunnel</div>
+                    <div class="text-sm text-blue-700 mt-1">Pilih "Networks" → "Tunnels" → "Create a tunnel"</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">3</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Copy Tunnel Token</div>
+                    <div class="text-sm text-blue-700 mt-1">Setelah tunnel dibuat, copy token yang dimulai dengan "eyJh..."</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">4</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Paste ke GarudaTel</div>
+                    <div class="text-sm text-blue-700 mt-1">Paste token di field "Tunnel Token" di atas</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">5</div>
+                <div>
+                    <div class="font-semibold text-blue-900 text-sm">Klik Save</div>
+                    <div class="text-sm text-blue-700 mt-1">Konfigurasi akan tersimpan di sistem</div>
+                </div>
+            </div>
+
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">6</div>
+                <div>
+                    <div class="font-semibold text-green-900 text-sm">Klik Test Connection</div>
+                    <div class="text-sm text-green-700 mt-1">Verifikasi bahwa konfigurasi sudah benar</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-white/50 rounded-xl border border-blue-200">
+            <div class="text-xs text-blue-600 font-semibold uppercase tracking-wider mb-1">⚠️ Catatan Penting</div>
+            <div class="text-sm text-blue-800">
+                Panel ini hanya untuk menyimpan konfigurasi. Install dan restart tunnel dilakukan secara manual atau via task automation terpisah.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadConfiguration() {
+    try {
+        const res = await fetch('/admin/api/cloudflare/config');
+        const data = await res.json();
+        
+        if (data.ok) {
+            // Update badge status
+            const badge = document.getElementById('cloudflare-status-badge');
+            if (data.is_configured) {
+                badge.className = 'px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Configured';
+            } else {
+                badge.className = 'px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Not Configured';
+            }
+            
+            // Fill form
+            if (data.config) {
+                document.getElementById('tunnel-token').value = data.config.CLOUDFLARE_TUNNEL_TOKEN || '';
+                document.getElementById('tunnel-name').value = data.config.CLOUDFLARE_TUNNEL_NAME || '';
+                document.getElementById('account-id').value = data.config.CLOUDFLARE_ACCOUNT_ID || '';
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load configuration:', e);
+    }
+}
+
+async function loadStatus() {
+    try {
+        const res = await fetch('/admin/api/cloudflare/status');
+        const data = await res.json();
+        
+        if (data.ok) {
+            document.getElementById('cf-connection-status').textContent = data.connection_status || '-';
+            document.getElementById('cf-tunnel-status').textContent = data.tunnel_status || '-';
+            document.getElementById('cf-tunnel-name').textContent = data.tunnel_name || '-';
+            document.getElementById('cf-hostname').textContent = data.hostname || '-';
+            document.getElementById('cf-service').textContent = data.service || '-';
+            document.getElementById('cf-last-check').textContent = data.last_check || '-';
+            
+            if (data.last_error) {
+                document.getElementById('cf-error-container').classList.remove('hidden');
+                document.getElementById('cf-last-error').textContent = data.last_error;
+            } else {
+                document.getElementById('cf-error-container').classList.add('hidden');
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load status:', e);
+    }
+}
+
+async function saveConfiguration() {
+    const token = document.getElementById('tunnel-token').value.trim();
+    const tunnelName = document.getElementById('tunnel-name').value.trim();
+    const accountId = document.getElementById('account-id').value.trim();
+    
+    if (!token) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Token Wajib Diisi',
+            text: 'Tunnel Token tidak boleh kosong',
+            confirmButtonColor: '#115E59'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Menyimpan Konfigurasi...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        if (!csrfToken) {
+            Swal.fire({
+                icon: 'error',
+                title: 'CSRF Token Tidak Ditemukan',
+                text: 'Silakan refresh halaman dan coba lagi',
+                confirmButtonColor: '#115E59'
+            });
+            return;
+        }
+        
+        const res = await fetch('/admin/api/cloudflare/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                tunnel_token: token,
+                tunnel_name: tunnelName,
+                account_id: accountId
+            })
+        });
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMsg = errorData.error || errorMsg;
+            } catch (e) {
+                // Jika response bukan JSON, gunakan text
+                if (errorText) errorMsg = errorText.substring(0, 200);
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan',
+                html: `<div class="text-sm">${errorMsg}</div>`,
+                confirmButtonColor: '#115E59'
+            });
+            return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Konfigurasi Tersimpan!',
+                text: 'Cloudflare Tunnel berhasil dikonfigurasi',
+                confirmButtonColor: '#115E59'
+            });
+            loadConfiguration();
+            loadStatus();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Menyimpan',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        console.error('Save configuration error:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            html: `<div class="text-sm">Network error atau server tidak merespons.<br><br>Detail: ${String(e)}</div>`,
+            confirmButtonColor: '#115E59'
+        });
+    }
+}
+
+async function testConnection() {
+    const token = document.getElementById('tunnel-token').value.trim();
+    
+    if (!token) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Token Tidak Ditemukan',
+            text: 'Silakan isi Tunnel Token terlebih dahulu',
+            confirmButtonColor: '#115E59'
+        });
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Testing Connection...',
+        text: 'Memvalidasi Tunnel Token',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+    
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const res = await fetch('/admin/api/cloudflare/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ tunnel_token: token })
+        });
+        
+        const data = await res.json();
+        
+        if (data.ok) {
+            if (data.is_valid) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Connected!',
+                    html: `
+                        <div class="text-left space-y-2">
+                            <p><strong>Status:</strong> ${data.status}</p>
+                            ${data.tunnel_name ? `<p><strong>Tunnel Name:</strong> ${data.tunnel_name}</p>` : ''}
+                            ${data.message ? `<p class="text-sm text-slate-600">${data.message}</p>` : ''}
+                        </div>
+                    `,
+                    confirmButtonColor: '#115E59'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Failed',
+                    text: data.error || 'Token tidak valid atau format salah'
+                });
+            }
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Test Failed',
+                text: data.error || 'Unknown error'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to connect to server'
+        });
+    }
+}
+
+function reloadConfiguration() {
+    loadConfiguration();
+    loadStatus();
+    
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Configuration reloaded',
+        showConfirmButton: false,
+        timer: 2000
+    });
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadConfiguration();
+    loadStatus();
+});
+</script>
+{% endblock %}

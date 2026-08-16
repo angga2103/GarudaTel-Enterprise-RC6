@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% block title %}Users · Admin{% endblock %}
+{% block body %}
+{% include '_navbar_admin.html' %}
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-semibold tracking-tight text-[#115E59]">Manajemen Users</h1>
+    <form class="flex gap-2" method="GET">
+      <input name="q" value="{{ search }}" placeholder="Cari username/email" class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />
+      <button class="px-4 py-2 rounded-xl bg-gradient-to-r from-[#115E59] to-[#0D9488] hover:opacity-90 shadow-md text-white text-sm font-semibold transition">Cari</button>
+    </form>
+  </div>
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50/50 text-[11px] uppercase text-slate-600 tracking-wider">
+        <tr>
+          <th class="text-left px-3 py-2.5 font-semibold">ID</th><th class="text-left px-3 py-2.5 font-semibold">Username</th>
+          <th class="text-left px-3 py-2.5 font-semibold">Status/WA</th><th class="text-left px-3 py-2.5 font-semibold">Role</th>
+          <th class="text-right px-3 py-2.5 font-semibold">Saldo</th><th class="text-left px-3 py-2.5 font-semibold">Dibuat</th>
+          <th class="text-center px-3 py-2.5 font-semibold">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-ink-100">
+        {% for u in users %}
+          <tr data-user='{{ dict(u)|tojson if u.__class__.__name__ == "Row" else u|tojson }}' class="hover:bg-slate-50/50/60">
+            <td class="px-3 py-2.5 text-slate-600">{{ u.id }}</td><td class="px-3 py-2.5 font-medium text-[#115E59]">{{ u.username }}</td>
+            <td class="px-3 py-2.5">
+              <div class="text-[10px] font-bold {{ 'text-rose-500' if u.status=='pending' else 'text-emerald-500' }} uppercase">{{ u.status }}</div>
+              <div class="text-[11px] text-slate-600">{{ u.whatsapp or '-' }}</div>
+            </td>
+            <td class="px-3 py-2.5"><span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full {{ 'bg-[#115E59] text-white' if u.role=='admin' else 'bg-slate-50/50 text-slate-600' }}">{{ u.role }}
+        <div class="mt-1">
+            {% if u.level == 'reseller' %}
+                <span class="bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded text-[9px] font-black tracking-widest uppercase flex items-center gap-1 w-max shadow-sm">👑 Reseller</span>
+            {% else %}
+                <span class="bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase w-max">👤 Member</span>
+            {% endif %}
+        </div>
+        </span></td>
+            <td class="px-3 py-2.5 text-right font-semibold text-[#115E59]">Rp {{ '{:,.0f}'.format(u.balance).replace(',', '.') }}</td>
+            <td class="px-3 py-2.5 text-xs text-slate-600">{{ u.created_at | wib }}</td>
+            <td class="px-3 py-2.5 text-center whitespace-nowrap">
+              {% if u.status == 'pending' %}
+              <button onclick='approveUser({{ u.id }}, "{{ u.username }}")' class="text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-2 py-1 rounded shadow-sm mr-2 transition">Izinkan</button>
+              {% endif %}
+              <button onclick='resetPass({{ u.id }}, "{{ u.username }}")' class="text-[10px] font-bold text-rose-500 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded border border-rose-200 mr-2 transition">Reset Pass</button>
+              <button onclick='resetPin({{ u.id }}, "{{ u.username }}")' class="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 mr-2 transition">Reset PIN</button>
+              <button onclick='editUser(this)' class="text-xs font-semibold text-[#165654] hover:text-[#115E59] hover:underline">Edit</button>
+              <button onclick='deleteUser({{ u.id }}, "{{ u.username }}")' class="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline ml-3">Hapus</button>
+              <button onclick='adjustBalance({{ u.id }}, "{{ u.username }}")' class="text-xs font-semibold text-emerald-700 hover:underline ml-3">Saldo</button>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="px-3 py-10 text-center text-slate-500">Tidak ada user.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+  async function editUser(btn) {
+    const u = JSON.parse(btn.closest('tr').dataset.user);
+    const result = await Swal.fire({
+      title: 'Edit User', width: 500,
+      html: `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+        <div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Username</label><input id="u_username" value="${u.username}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" /></div>
+        <div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Email</label><input id="u_email" value="${u.email||''}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" /></div>
+        <div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">WhatsApp</label><input id="u_wa" value="${u.whatsapp && u.whatsapp !== '-' ? u.whatsapp : ''}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" placeholder="081234..." /></div>
+        <div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Role</label>
+          <select id="u_role" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10"><option value="user" ${u.role==='user'?'selected':''}>user</option><option value="admin" ${u.role==='admin'?'selected':''}>admin</option></select></div>
+        <div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Level Akun</label>
+          <select id="u_level" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10"><option value="reguler" ${u.level!=='reseller'?'selected':''}>Member Reguler</option><option value="reseller" ${u.level==='reseller'?'selected':''}>Reseller</option></select></div>
+<div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Nama Toko</label><input id="u_store" value="${u.store_name||'Garuda Tell'}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" placeholder="Garuda Tell" /></div>
+        <div><label class="block text-[11px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Warna Tema</label><input type="color" id="u_color" value="${u.theme_color||'#115E59'}" class="w-full h-[38px] border border-slate-200 rounded-lg px-1 py-1 cursor-pointer" /></div>
+      </div>`,
+      showCancelButton: true, confirmButtonText:'Simpan', cancelButtonText:'Batal',
+      focusConfirm: false,
+      preConfirm: () => ({ username: document.getElementById('u_username').value.trim(), email: document.getElementById('u_email').value.trim(), whatsapp: document.getElementById('u_wa').value.trim(), role: document.getElementById('u_role').value, level: document.getElementById('u_level').value, store_name: document.getElementById('u_store').value.trim(), theme_color: document.getElementById('u_color').value })
+    });
+    if (!result.isConfirmed || !result.value) return;
+    const r = await postJSON(`/admin/users/${u.id}/edit`, result.value);
+    if (r.ok) { notifySuccess('User diupdate'); setTimeout(() => location.reload(), 400); }
+    else notifyError(r.body.error || 'Gagal');
+  }
+  async function adjustBalance(uid, username) {
+    const { value: delta, isConfirmed } = await Swal.fire({
+      title: 'Atur Saldo', html: `<div class="text-xs text-slate-600 mb-2">User: <b class="text-[#115E59]">${username}</b><br>Nilai positif = tambah, negatif = kurangi.</div>`,
+      input: 'number', inputPlaceholder: 'cth: 50000 atau -10000',
+      showCancelButton: true, confirmButtonText: 'Proses', cancelButtonText: 'Batal',
+    });
+    if (!isConfirmed || delta === undefined || delta === '') return;
+    const r = await postJSON(`/admin/users/${uid}/balance`, { delta: parseInt(delta||'0', 10) });
+    if (r.ok) { notifySuccess('Saldo: Rp ' + Number(r.body.balance).toLocaleString('id-ID')); setTimeout(()=>location.reload(),500); }
+    else notifyError(r.body.error || 'Gagal');
+  }
+
+  async function approveUser(uid, uname) {
+    if(!confirm("Izinkan " + uname + " untuk login?")) return;
+    const r = await postJSON("/admin/users/approve", {user_id: uid});
+    if(r.ok) location.reload();
+  }
+  
+  async function deleteUser(uid, uname) {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Hapus User?',
+      html: `Yakin ingin menghapus <b>${uname}</b> secara permanen?<br><br><span class="text-xs text-rose-500 font-bold">⚠️ Semua data dan riwayat transaksi milik agen ini akan ikut hangus tak bersisa!</span>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Basmi!',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#e11d48',
+      cancelButtonColor: '#0f172a'
+    });
+    
+    if (!isConfirmed) return;
+    
+    Swal.fire({title: 'Membumihanguskan...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+    const r = await postJSON(`/admin/users/delete/${uid}`, {});
+    
+    if (r.ok) {
+      Swal.fire({icon: 'success', title: 'Terhapus!', text: 'Akun berhasil dibasmi.', showConfirmButton: false, timer: 1500});
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      Swal.fire({icon: 'error', title: 'Gagal', text: r.body.error || 'Terjadi kesalahan internal.'});
+    }
+  }
+
+  
+  async function resetPin(uid, uname) {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Reset PIN Transaksi?',
+      html: `Yakin ingin meriset PIN milik <b>${uname}</b> kembali ke default <b>123456</b>?`,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Reset!',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      cancelButtonColor: '#0f172a'
+    });
+    
+    if (!isConfirmed) return;
+    
+    const r = await postJSON("/admin/users/reset-pin", {user_id: uid});
+    if (r.ok) {
+      Swal.fire({icon: 'success', title: 'Berhasil!', text: r.body.msg, confirmButtonColor: '#115E59'});
+    } else {
+      Swal.fire({icon: 'error', title: 'Gagal', text: r.body.error || 'Terjadi kesalahan.'});
+    }
+  }
+
+  async function resetPass(uid, uname) {
+    const btn = event.currentTarget || event.target;
+    const row = btn.closest('tr');
+    const userData = JSON.parse(row.dataset.user);
+    const waNumber = userData.whatsapp && userData.whatsapp !== '-' ? userData.whatsapp : '';
+
+    const { isConfirmed } = await Swal.fire({
+      title: 'Reset Password Akun?',
+      html: `Yakin ingin mereset sandi milik <b>${uname}</b> kembali ke default <b class="text-rose-600">123456</b>?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Reset!',
+      cancelButtonText: 'Batal',
+      buttonsStyling: false,
+      customClass: { 
+        popup: 'rounded-3xl shadow-xl', 
+        confirmButton: 'bg-[#115E59] hover:bg-teal-800 text-white px-5 py-2.5 rounded-xl font-bold mr-3 shadow-sm transition', 
+        cancelButton: 'bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold transition' 
+      }
+    });
+    
+    if (!isConfirmed) return;
+    
+    Swal.fire({title: 'Memproses...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+    
+    const r = await postJSON("/admin/users/reset-password", {user_id: uid});
+    if(r.ok) {
+        if(waNumber) {
+            // MERAKIT PESAN WA SUPER CANTIK
+            const waText = `Halo Bos! 👋
+
+Password akun *Garuda Tell* kamu sudah berhasil direset nih. 🦅✨
+
+Kunci sementara kamu:
+🔑 *123456*
+
+⚠️ *PENTING:*
+Setelah berhasil masuk, tolong *LANGSUNG* klik tombol *'Ganti Sandi'* di pojok kanan atas ya, biar akun Bos tetap 100% aman! 🛡️
+
+Ada kendala lagi? Balas pesan ini aja ya Bos! 🚀`;
+            
+            let waFormatted = waNumber;
+            if(waFormatted.startsWith('0')) { waFormatted = '62' + waFormatted.substring(1); }
+            const waLink = `https://wa.me/${waFormatted}?text=${encodeURIComponent(waText)}`;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Reset Berhasil!',
+                html: `Sandi <b>${uname}</b> sukses direset ke 123456.<br><br><span class="text-xs text-slate-500 font-medium">Nomor WA Agen: ${waNumber}</span>`,
+                showCancelButton: true,
+                confirmButtonText: '📲 Kabari via WA',
+                cancelButtonText: 'Tutup',
+                buttonsStyling: false,
+                customClass: { 
+                    popup: 'rounded-3xl shadow-xl border border-slate-100', 
+                    confirmButton: 'bg-[#25D366] hover:bg-[#1DA851] text-white px-5 py-2.5 rounded-xl font-bold mr-3 shadow-sm transition', 
+                    cancelButton: 'bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold transition' 
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.open(waLink, '_blank');
+                }
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                icon: 'success',
+                title: 'Reset Berhasil!',
+                text: `Sandi ${uname} sukses direset ke 123456. (Agen ini belum menyimpan nomor WA)`,
+                confirmButtonText: 'Oke',
+                buttonsStyling: false,
+                customClass: {
+                    confirmButton: 'bg-[#115E59] hover:bg-teal-800 text-white px-5 py-2.5 rounded-xl font-bold transition'
+                }
+            }).then(() => location.reload());
+        }
+    } else {
+        Swal.fire({icon: 'error', title: 'Gagal', text: r.body.error || 'Terjadi kesalahan sistem.'});
+    }
+  }
+</script>
+
+{% endblock %}

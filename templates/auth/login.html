@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Masuk · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="min-h-screen grid place-items-center px-4 py-10 bg-slate-50/50">
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-[#115E59] to-[#0D9488] shadow-lg shadow-teal-900/20 grid place-items-center text-white text-xl font-bold"><svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12l5.25-5.25a2 2 0 0 1 2.83 0L12 8.5l1.92-1.75a2 2 0 0 1 2.83 0L22 12" />
+    <path d="M7 17l3.25-3.25a2 2 0 0 1 2.83 0L17 17" />
+</svg></div>
+      <h1 class="mt-4 text-2xl font-semibold tracking-tight text-[#115E59]">Selamat Datang</h1>
+      <p class="text-slate-600 text-sm mt-1">Masuk ke akun {{ APP_NAME }} kamu</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-soft p-6 border border-slate-200">
+      {% if google_enabled %}
+        <a href="{{ url_for('auth.login_google') }}" class="w-full flex items-center justify-center gap-2.5 border border-slate-200 rounded-xl py-2.5 text-sm font-medium text-[#165654] hover:bg-slate-50/50 transition">
+          <svg class="w-4 h-4" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C33.6 6.1 29.1 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C33.6 6.1 29.1 4 24 4 16.3 4 9.6 8.4 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5 0 9.5-1.9 12.9-5.1l-6-5.1c-2 1.5-4.4 2.4-6.9 2.4-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.4 39.5 16.1 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.7l6 5.1c-.4.4 6.5-4.7 6.5-13.8 0-1.3-.1-2.3-.4-3.5z"/></svg>
+          Lanjutkan dengan Google
+        </a>
+        <div class="my-5 flex items-center gap-3 text-[11px] text-slate-500 uppercase tracking-wider">
+          <div class="flex-1 h-px bg-slate-100"></div>atau<div class="flex-1 h-px bg-slate-100"></div>
+        </div>
+      {% endif %}
+      <form id="loginForm" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-800 mb-1.5">Username</label>
+          <input name="username" required autocomplete="username" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59] transition" placeholder="Masukkan username" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-800 mb-1.5">Password</label>
+          <div class="relative flex items-center">
+          <input id="login_pass" name="password" type="password" required autocomplete="current-password" class="w-full border border-slate-200 rounded-xl pl-3 pr-10 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59] transition" placeholder="••••••••" />
+          <button type="button" onclick="window.toggleUserPass('login_pass')" class="absolute right-0 mr-3 text-slate-500 z-10 cursor-pointer p-2 hover:text-slate-800 focus:outline-none">
+              <svg id="icon_login_pass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+          </button>
+        </div>
+        </div>
+        <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-[#115E59] to-[#0D9488] hover:opacity-90 shadow-md text-white py-2.5 text-sm font-semibold transition">Masuk</button>
+      </form>
+      <div class="mt-4 flex items-center justify-between text-xs">
+        <button type="button" onclick="forgotPass()" class="text-slate-600 hover:text-[#115E59] flex items-center gap-1.5 font-medium focus:outline-none">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.97-4.03 9-9 9-1.49 0-2.89-.36-4.13-1L3 21l1-4.13C3.36 14.89 3 13.49 3 12c0-4.97 4.03-9 9-9s9 4.03 9 9z"/></svg>
+          Lupa password?
+        </button>
+        <a href="{{ url_for('auth.register') }}" class="text-[#115E59] hover:underline font-semibold">Daftar baru</a>
+      </div>
+    </div>
+    
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    Swal.fire({title: 'Memproses…', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+    const res = await postJSON('{{ url_for('auth.login') }}', data);
+    Swal.close();
+    if (res.ok) { notifySuccess('Berhasil masuk'); setTimeout(() => window.location.replace(res.body.redirect), 400); }
+    else { notifyError(res.body.error || 'Gagal masuk'); }
+  });
+
+  async function forgotPass() {
+    const { value: formValues } = await Swal.fire({
+      title: 'Verifikasi Akun',
+      html: `
+        <p class="text-xs text-slate-600 mb-4 text-left">Masukkan Username dan Nomor WA yang terdaftar untuk menghubungi Admin.</p>
+        <input id="f_username" type="text" placeholder="Username Anda (wajib)" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#115E59] mb-3">
+        <input id="f_wa" type="number" placeholder="Nomor WhatsApp Anda" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#115E59]">
+      `,
+      focusConfirm: false, showCancelButton: true, confirmButtonText: 'Verifikasi', cancelButtonText: 'Batal', confirmButtonColor: '#115E59',
+      preConfirm: () => {
+        const u = document.getElementById('f_username').value;
+        const w = document.getElementById('f_wa').value;
+        if(!u || !w) { Swal.showValidationMessage('Username dan WA wajib diisi'); return false; }
+        return { username: u, whatsapp: w };
+      }
+    });
+    if(!formValues) return;
+    
+    Swal.fire({title: 'Memeriksa...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+    const res = await postJSON('/forgot-password', formValues);
+    if(res.ok) {
+        Swal.close();
+        location.href = res.body.link; // Redirect ke WA Bos Ansor
+    } else {
+        Swal.fire('Ditolak!', res.body.error, 'error');
+    }
+  }
+
+</script>
+{% endblock %}

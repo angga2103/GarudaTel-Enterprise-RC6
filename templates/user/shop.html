@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Belanja · {{ APP_NAME }}{% endblock %}
+{% block body %}
+{% include '_navbar_user.html' %}
+<main class="max-w-5xl mx-auto px-4 py-6 pb-24 md:pb-10 space-y-6">
+  <h1 class="text-2xl font-semibold tracking-tight text-[#115E59]">Belanja Layanan</h1>
+
+  <section>
+    <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-2.5">1. Pilih Kategori</div>
+    <div class="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4">
+      {% for c in categories %}
+        <a href="{{ url_for('user.shop', category=c.category) }}" class="shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium border transition {{ 'bg-[#115E59] text-white border-[#115E59]' if selected_cat==c.category else 'bg-white border-slate-200 text-slate-800 hover:border-[#115E59]' }}">{{ c.category }}</a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if selected_cat %}
+  <section>
+    <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-2.5">2. Pilih Brand</div>
+    <div class="flex flex-wrap gap-2">
+      {% for b in brands %}
+        <a href="{{ url_for('user.shop', category=selected_cat, brand=b.brand) }}" class="px-3.5 py-1.5 rounded-full text-sm font-medium border transition {{ 'bg-[#115E59] text-white border-[#115E59]' if selected_brand==b.brand else 'bg-white border-slate-200 text-slate-800 hover:border-[#115E59]' }}">{{ b.brand }} <span class="opacity-60 font-normal">({{ b.count }})</span></a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if selected_brand %}
+  <section>
+    <div class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold mb-2.5">3. Pilih Produk</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for p in products %}
+        <button onclick='openBuy({{ p.id }}, {{ p.name|tojson }}, {{ p.price }})' class="text-left bg-white border border-slate-200 hover:border-[#115E59] hover:shadow-soft transition rounded-2xl p-4">
+          <div class="text-sm font-semibold text-[#115E59]">{{ p.name }}</div>
+          <div class="text-xs text-slate-500 mt-0.5 font-mono">{{ p.sku }}</div>
+          <div class="mt-3 text-[#115E59] font-semibold">Rp {{ '{:,.0f}'.format(p.price).replace(',', '.') }}</div>
+        </button>
+      {% else %}
+        <div class="col-span-full text-center py-10 text-sm text-slate-600 bg-white border border-slate-200 rounded-2xl">Tidak ada produk untuk brand ini.</div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}
+{% block scripts %}
+<script>
+  async function openBuy(pid, name, price) {
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Konfirmasi Pembelian',
+      html: `
+        <div class="text-sm font-semibold text-[#115E59] mb-1">${name}</div>
+        <div class="text-sm text-slate-600 mb-4">Harga: <b class="text-[#115E59]">${rupiah(price)}</b></div>
+        <div class="text-left">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Nomor Tujuan</label>
+          <input id="swal-input1" type="tel" class="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-[#115E59] shadow-sm transition mb-4" placeholder="Contoh: 081234567890">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">PIN Transaksi</label>
+          <input id="swal-input2" type="password" inputmode="numeric" class="w-full border border-slate-200 rounded-xl px-3 py-3 text-sm text-center tracking-[1em] focus:outline-none focus:border-[#115E59] shadow-sm transition" placeholder="******">
+        </div>
+      `,
+      showCancelButton: true, confirmButtonText: 'Bayar Sekarang', cancelButtonText: 'Batal',
+      focusConfirm: false,
+      preConfirm: () => {
+        const t = document.getElementById('swal-input1').value;
+        const p = document.getElementById('swal-input2').value;
+        if (!t) { Swal.showValidationMessage('Nomor tujuan wajib diisi'); return false; }
+        if (!p) { Swal.showValidationMessage('PIN wajib diisi'); return false; }
+        return { target: t, pin: p };
+      }
+    });
+    if (!isConfirmed || !formValues) return;
+    const target = formValues.target;
+    const pin = formValues.pin;
+    Swal.fire({title: 'Memproses transaksi…', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false});
+    const res = await postJSON('{{ url_for('user.buy') }}', { product_id: pid, target: target, pin: pin });
+    Swal.close();
+    if (res.ok) {
+      const b = res.body;
+      if (b.status === 'success') {
+        const snBlock = b.sn ? `<div class="mt-3 bg-slate-50/50 border border-slate-200 rounded-xl p-3 text-left"><div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Token / SN</div><div class="font-mono text-sm text-[#115E59] break-all select-all">${b.sn}</div></div>` : '';
+        await Swal.fire({icon:'success', title:'Transaksi Berhasil', html: `<div class="text-sm text-slate-600">${name}<div class="text-xs text-slate-500 mt-1">Order: ${b.order_id}</div>${snBlock}<div class="mt-3 text-xs">Saldo baru: <b class="text-[#115E59]">${rupiah(b.balance)}</b></div></div>`});
+      } else {
+        await Swal.fire({icon:'info', title:'Transaksi Pending', text:'Pesanan sedang diproses. Cek riwayat untuk update.'});
+      }
+      location.reload();
+    } else {
+      notifyError(res.body.error || 'Transaksi gagal');
+    }
+  }
+</script>
+{% endblock %}

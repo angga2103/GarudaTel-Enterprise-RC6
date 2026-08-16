@@ -1,0 +1,421 @@
+============================================================================
+GARUDATEL ENTERPRISE - DEPLOYMENT CHECKLIST
+Release Candidate 1 (RC1)
+============================================================================
+
+Use this checklist to ensure proper deployment and configuration.
+Check each item as you complete it.
+
+============================================================================
+PRE-DEPLOYMENT
+============================================================================
+
+[ ] Server prepared
+    - Ubuntu 20.04+ or Debian 11+ installed
+    - Root access available
+    - Internet connection verified
+    - Minimum 1GB RAM, 2GB recommended
+    - Minimum 2GB disk space available
+
+[ ] Package downloaded
+    - GarudaTel_Enterprise_RC1.zip obtained
+    - File integrity verified
+    - Package uploaded to server
+
+[ ] Documentation reviewed
+    - INSTALL_GUIDE.txt read
+    - RELEASE_NOTES_RC1.txt reviewed
+    - Deployment plan prepared
+
+[ ] Backup plan ready
+    - Backup storage identified
+    - Restore procedure documented
+    - Emergency contact list prepared
+
+============================================================================
+INSTALLATION
+============================================================================
+
+[ ] Package extracted
+    - ZIP uploaded to /root/
+    - Extracted to /root/web_ppob/paypoint/
+    - Files verified present
+
+[ ] Installer executed
+    - Made executable: chmod +x installer_vps_baru.sh
+    - Ran installer: ./installer_vps_baru.sh
+    - All 11 phases completed
+
+[ ] Cloudflare Tunnel configured
+    - Cloudflare account ready
+    - Tunnel created in dashboard
+    - Token copied and entered
+    - Tunnel service installed
+
+[ ] Installation certified
+    - Certification report generated
+    - Status: SERVER READY ✓
+    - Health Score: 100%
+    - No critical errors
+
+============================================================================
+FIRST LOGIN
+============================================================================
+
+[ ] Admin login successful
+    - Accessed: https://your-domain.com
+    - Username: admin
+    - Password: admin123
+    - Login successful
+
+[ ] Password changed
+    - New strong password set
+    - Password saved securely
+    - Test login with new password
+
+[ ] Admin profile updated
+    - Email address set
+    - WhatsApp number configured
+    - Store name configured
+
+============================================================================
+INTEGRATION CENTER - REQUIRED PROVIDERS
+============================================================================
+
+[ ] Digiflazz configured (REQUIRED)
+    - Navigate to: Integration Center → Digiflazz
+    - DIGIFLAZZ_USER entered
+    - DIGIFLAZZ_KEY entered
+    - Test Connection: SUCCESS
+    - Configuration saved
+    - Status shows: CONNECTED
+
+[ ] PaymentKita configured (REQUIRED)
+    - Navigate to: Integration Center → PaymentKita
+    - PAYMENTKITA_MERCHANT entered
+    - PAYMENTKITA_SECRET entered
+    - Test Connection: SUCCESS
+    - Configuration saved
+    - Status shows: CONNECTED
+
+[ ] Pakasir configured (REQUIRED)
+    - Navigate to: Integration Center → Pakasir
+    - PAKASIR_KEY entered
+    - PAKASIR_PROJECT verified/updated
+    - Test Connection: SUCCESS
+    - Configuration saved
+    - Status shows: CONNECTED
+
+============================================================================
+INTEGRATION CENTER - OPTIONAL PROVIDERS
+============================================================================
+
+[ ] Telegram configured (OPTIONAL)
+    - Bot created via @BotFather
+    - TELEGRAM_BOT_TOKEN entered
+    - TELEGRAM_CHAT_ID entered
+    - Test Connection: SUCCESS
+    - Configuration saved
+    - Service restarted: systemctl restart telegram_listener
+    - Status shows: CONNECTED
+
+[ ] Firebase configured (OPTIONAL)
+    - Firebase project created
+    - firebase_credentials.json downloaded
+    - Credentials uploaded to server
+    - FIREBASE_PROJECT_ID entered
+    - Test Connection: SUCCESS
+    - Configuration saved
+    - Status shows: CONNECTED
+
+[ ] Cloudflare verified (Already configured)
+    - Navigate to: Integration Center → Cloudflare
+    - Status verified: CONNECTED
+    - Tunnel active
+    - Domain accessible
+
+[ ] WhatsApp configured (OPTIONAL)
+    - WhatsApp Business API provider selected
+    - WHATSAPP_API_URL entered
+    - WHATSAPP_API_KEY entered
+    - Test Connection: SUCCESS
+    - Configuration saved
+    - Status shows: CONNECTED
+
+============================================================================
+SERVICE VERIFICATION
+============================================================================
+
+[ ] web_ppob service
+    - Command: systemctl status web_ppob
+    - Status: active (running)
+    - No errors in logs
+    - Port 2100 accessible
+
+[ ] subscription_worker service
+    - Command: systemctl status subscription_worker
+    - Status: active (running)
+    - No errors in logs
+    - Worker processing subscriptions
+
+[ ] telegram_listener service (if configured)
+    - Command: systemctl status telegram_listener
+    - Status: active (running)
+    - No errors in logs
+    - Bot responding to commands
+
+[ ] Cloudflare tunnel
+    - Tunnel status: active
+    - Domain accessible externally
+    - HTTPS working
+    - No certificate errors
+
+============================================================================
+FUNCTIONAL TESTING
+============================================================================
+
+[ ] Test transaction (Pulsa)
+    - Login as admin
+    - Navigate to: Dashboard → Pulsa
+    - Select small denomination (Rp 5,000)
+    - Enter test phone number
+    - Transaction processed successfully
+    - Balance deducted correctly
+    - SN/receipt received
+
+[ ] Test transaction (Token PLN)
+    - Navigate to: Dashboard → Token PLN
+    - Enter test meter number
+    - Select small denomination
+    - Transaction processed successfully
+    - Token code received
+
+[ ] Test deposit (QRIS)
+    - Navigate to: Dashboard → Deposit
+    - Select amount (minimum)
+    - QRIS code generated
+    - Payment gateway accessible
+    - (Optional: Complete payment for full test)
+
+[ ] Test subscription
+    - Navigate to: Dashboard → Langganan
+    - Create test subscription
+    - Schedule: daily
+    - Product selected
+    - Target entered
+    - Subscription created
+    - Verify in subscription list
+
+[ ] Test subscription worker
+    - Wait for scheduled time or force run
+    - Check logs: journalctl -u subscription_worker -n 50
+    - Verify subscription processed
+    - Transaction created
+    - Status updated
+
+[ ] Test notification (if Firebase configured)
+    - Send test notification via Notification Center
+    - Target: self
+    - Verify delivery
+    - Check notification_broadcasts table
+
+[ ] Test Telegram bot (if configured)
+    - Send message to bot
+    - Verify bot responds
+    - Test menu navigation
+    - Test broadcast feature
+
+============================================================================
+BACKUP & RECOVERY
+============================================================================
+
+[ ] Automatic backup verified
+    - Check cron: crontab -l
+    - Backup job exists (every 2 hours)
+    - Log file exists: backup_cron.log
+    - Recent backup successful
+
+[ ] Manual backup created
+    - Database backup: paypoint.db copied
+    - Configuration backup: .env copied
+    - Backup location documented
+    - Backup integrity verified
+
+[ ] Restore procedure tested (optional but recommended)
+    - Test restore on staging/backup server
+    - Verify data integrity
+    - Verify services start
+    - Verify providers work
+
+============================================================================
+MONITORING SETUP
+============================================================================
+
+[ ] Log monitoring
+    - Know location: /root/web_ppob/paypoint/
+    - Key logs identified:
+      * journalctl -u web_ppob
+      * journalctl -u subscription_worker
+      * backup_cron.log
+    - Log rotation configured (systemd default)
+
+[ ] Service monitoring
+    - systemctl status commands documented
+    - Restart commands documented
+    - Alert mechanism decided
+    - Monitoring schedule established
+
+[ ] Disk space monitoring
+    - Current usage checked: df -h
+    - Database size noted
+    - Growth rate estimated
+    - Cleanup plan prepared
+
+============================================================================
+SECURITY CHECKLIST
+============================================================================
+
+[ ] Default password changed
+    - Admin password updated
+    - New password strong (12+ chars, mixed)
+    - Password stored securely
+
+[ ] SECRET_KEY verified
+    - Check: .env file
+    - SECRET_KEY auto-generated
+    - 64 characters hex
+    - Not default value
+
+[ ] Firewall configured
+    - Only necessary ports open
+    - SSH port secured
+    - Cloudflare tunnel handles HTTPS
+    - Direct HTTP/HTTPS ports can be blocked
+
+[ ] SSL/TLS verified
+    - HTTPS working via Cloudflare
+    - Certificate valid
+    - No mixed content warnings
+
+[ ] Access control verified
+    - Only authorized users have server access
+    - SSH key-based auth enabled (recommended)
+    - Root login policy decided
+
+============================================================================
+DOCUMENTATION
+============================================================================
+
+[ ] Deployment documented
+    - Server details recorded
+    - Domain recorded
+    - Provider credentials stored securely
+    - Access credentials stored securely
+
+[ ] Operational procedures documented
+    - Restart procedure
+    - Backup procedure
+    - Restore procedure
+    - Troubleshooting guide
+
+[ ] Contact information recorded
+    - Technical support contact
+    - Provider support contacts
+    - Emergency escalation path
+
+============================================================================
+GO-LIVE CHECKLIST
+============================================================================
+
+[ ] All required providers configured
+    - Digiflazz: CONNECTED
+    - PaymentKita: CONNECTED
+    - Pakasir: CONNECTED
+
+[ ] All services running
+    - web_ppob: active
+    - subscription_worker: active
+    - Cloudflare tunnel: active
+
+[ ] All tests passed
+    - Transaction test: PASS
+    - Subscription test: PASS
+    - Notification test: PASS (if configured)
+
+[ ] Monitoring active
+    - Service monitoring: YES
+    - Log monitoring: YES
+    - Backup monitoring: YES
+
+[ ] Team trained
+    - Admin panel navigation
+    - Provider configuration
+    - Basic troubleshooting
+    - Backup/restore procedure
+
+[ ] Final verification
+    - End-to-end transaction test: PASS
+    - All integration statuses: CONNECTED
+    - No errors in logs
+    - Performance acceptable
+
+============================================================================
+POST-DEPLOYMENT
+============================================================================
+
+[ ] First 24 hours
+    - Monitor all services continuously
+    - Check logs every 2 hours
+    - Verify auto-backup runs
+    - Test subscription worker execution
+
+[ ] First week
+    - Daily service checks
+    - Transaction volume monitored
+    - Error rate tracked
+    - User feedback collected
+
+[ ] Ongoing
+    - Weekly backup verification
+    - Monthly security review
+    - Quarterly provider credential rotation
+    - Regular disk space check
+
+============================================================================
+ROLLBACK PLAN (IF NEEDED)
+============================================================================
+
+[ ] Rollback preparation
+    - Backup of previous version exists
+    - Rollback procedure documented
+    - Downtime window acceptable
+    - Stakeholders notified
+
+If rollback needed:
+    1. Stop all services
+    2. Restore previous database
+    3. Restore previous .env
+    4. Restore previous codebase
+    5. Start services
+    6. Verify functionality
+    7. Document issues
+
+============================================================================
+SIGN-OFF
+============================================================================
+
+Deployment completed by: _______________________
+
+Date: ____________________
+
+Verification completed by: _______________________
+
+Date: ____________________
+
+Production approved by: _______________________
+
+Date: ____________________
+
+============================================================================
+END OF DEPLOYMENT CHECKLIST
+============================================================================

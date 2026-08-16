@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}{{ promo.title }} · {{ APP_NAME }}{% endblock %}
+
+{% block body %}
+<main class="w-full md:max-w-3xl mx-auto bg-white min-h-screen relative font-sans pb-20 shadow-xl">
+    <div class="bg-[#0f4a46] px-4 py-3 flex items-center gap-3 text-white sticky top-0 z-50 shadow-md">
+        <a href="javascript:history.back()" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition active:scale-90">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        </a>
+        <div class="flex-1">
+            <h1 class="text-[15px] font-black uppercase tracking-wide leading-tight">{{ promo.title }}</h1>
+            <p class="text-[10px] text-teal-100/80 font-medium">Oleh {{ promo.author }} pada {{ promo.date }}</p>
+        </div>
+    </div>
+
+    <div class="w-full bg-slate-100">
+        <img src="{{ promo.image }}" class="w-full max-h-[220px] object-cover shadow-sm">
+    </div>
+
+    <div class="p-5 text-slate-700">
+        <div class="text-sm leading-relaxed whitespace-pre-line mb-6 font-medium text-slate-800">
+            {{ promo.desc_long }}
+        </div>
+
+        <div class="space-y-2 text-sm border-y border-slate-100 py-5 my-5">
+            <div class="flex items-start gap-2">
+                <span class="w-28 font-bold text-slate-800 flex items-center gap-2">📅 Periode</span>
+                <span class="font-medium text-slate-600">: {{ promo.periode }}</span>
+            </div>
+            <div class="flex items-start gap-2">
+                <span class="w-28 font-bold text-slate-800 flex items-center gap-2">🏆 Pengumuman</span>
+                <span class="font-medium text-slate-600">: {{ promo.pengumuman }}</span>
+            </div>
+            <div class="flex items-start gap-2">
+                <span class="w-28 font-bold text-slate-800 flex items-center gap-2">🎁 Hadiah</span>
+                <span class="font-black text-teal-700">: {{ promo.hadiah }}</span>
+            </div>
+        </div>
+
+        {% if promo.disclaimer and promo.disclaimer|trim != "" %}
+        <div class="bg-amber-50/80 border-l-[3px] border-amber-400 p-3 mt-6 rounded-r-lg">
+            <p class="text-xs text-amber-800 italic font-medium leading-relaxed">⚠️ {{ promo.disclaimer }}</p>
+        </div>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}

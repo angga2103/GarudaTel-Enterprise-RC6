@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Integration Center · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Integration Center</h1>
+        <p class="text-sm text-slate-600 mt-1">Pusat integrasi sistem eksternal dan layanan monitoring</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        <!-- Digiflazz -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">🔌</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Digiflazz</h3>
+            <p class="text-xs text-slate-600">Konfigurasi koneksi dan monitoring provider Digiflazz</p>
+        </div>
+
+        <!-- PaymentKita -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">💳</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">PaymentKita</h3>
+            <p class="text-xs text-slate-600">Pengaturan payment gateway dan QRIS otomatis</p>
+        </div>
+
+        <!-- Pakasir -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">🛒</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Pakasir</h3>
+            <p class="text-xs text-slate-600">Integrasi sistem kasir dan pembayaran offline</p>
+        </div>
+
+        <!-- Telegram -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">✈️</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Telegram</h3>
+            <p class="text-xs text-slate-600">Konfigurasi bot notifikasi dan customer service</p>
+        </div>
+
+        <!-- WhatsApp -->
+        <a href="/admin/whatsapp-center" class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden hover:shadow-md hover:border-[#115E59] transition-all">
+            <div class="text-4xl mb-4">💬</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">WhatsApp</h3>
+            <p class="text-xs text-slate-600">WhatsApp Communication Center untuk broadcast</p>
+        </a>
+
+        <!-- Firebase -->
+        <a href="/admin/firebase" class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden hover:shadow-md hover:border-[#115E59] transition-all">
+            <div class="text-4xl mb-4">🔥</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Firebase</h3>
+            <p class="text-xs text-slate-600">Pengaturan push notification dan cloud messaging</p>
+        </a>
+
+        <!-- Broadcast Center -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">📢</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Broadcast Center</h3>
+            <p class="text-xs text-slate-600">Pusat broadcast pesan massal ke semua member</p>
+        </div>
+
+        <!-- Cloudflare Zero Trust -->
+        <a href="/admin/cloudflare" class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden hover:shadow-md hover:border-[#115E59] transition-all">
+            <div class="text-4xl mb-4">☁️</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Cloudflare Zero Trust</h3>
+            <p class="text-xs text-slate-600">Secure tunnel management dan remote access</p>
+        </a>
+
+        <!-- Health Monitor -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">🏥</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Health Monitor</h3>
+            <p class="text-xs text-slate-600">Monitoring kesehatan sistem dan alert otomatis</p>
+        </div>
+
+        <!-- Configuration Backup -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">💾</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Configuration Backup</h3>
+            <p class="text-xs text-slate-600">Backup dan restore konfigurasi sistem otomatis</p>
+        </div>
+
+        <!-- Configuration Log -->
+        <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 right-0 mt-4 mr-4">
+                <span class="px-2 py-1 bg-amber-50 text-amber-600 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-200">Coming Next Patch</span>
+            </div>
+            <div class="text-4xl mb-4">📝</div>
+            <h3 class="text-base font-bold text-[#115E59] mb-2">Configuration Log</h3>
+            <p class="text-xs text-slate-600">Riwayat perubahan konfigurasi dan audit trail</p>
+        </div>
+
+    </div>
+
+    <div class="mt-8">
+        <a href="/admin" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Kembali ke Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

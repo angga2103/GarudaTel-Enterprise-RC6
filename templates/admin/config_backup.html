@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% block title %}Configuration Backup · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="/admin/integration-center" class="text-slate-600 hover:text-[#115E59] transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Configuration Backup</h1>
+                <p class="text-sm text-slate-600 mt-1">Backup dan restore konfigurasi sistem otomatis</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Actions</h2>
+        <div class="flex gap-3">
+            <button onclick="createBackup()" class="px-6 py-2 bg-[#115E59] hover:bg-[#0D4A47] text-white rounded-xl text-sm font-semibold transition-colors">
+                Create Backup Now
+            </button>
+            <button onclick="loadBackups()" class="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                Refresh List
+            </button>
+        </div>
+    </div>
+
+    <!-- Backups List -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Available Backups</h2>
+        <div id="backupsList">
+            <div class="text-center py-8 text-slate-500">Loading backups...</div>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alertBox" class="hidden mt-6"></div>
+</div>
+
+<!-- Restore Confirmation Modal -->
+<div id="restoreModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-[24px] p-8 max-w-md mx-4">
+        <h3 class="text-xl font-bold text-[#115E59] mb-4">⚠️ Confirm Restore</h3>
+        <p class="text-sm text-slate-600 mb-4">
+            Apakah Anda yakin ingin restore konfigurasi dari backup ini?
+        </p>
+        <p class="text-sm text-amber-600 mb-6">
+            <strong>Warning:</strong> Konfigurasi saat ini akan diganti dengan backup yang dipilih. Aplikasi perlu direstart setelah restore.
+        </p>
+        <div class="text-xs text-slate-500 mb-6 bg-slate-50 p-3 rounded-xl">
+            Backup: <span id="restoreFileName" class="font-mono font-semibold"></span>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="confirmRestore()" class="flex-1 px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition-colors">
+                Yes, Restore
+            </button>
+            <button onclick="closeRestoreModal()" class="flex-1 px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedBackupFile = null;
+
+async function loadBackups() {
+    try {
+        const res = await fetch('/admin/api/config/backups');
+        const data = await res.json();
+
+        if (data.ok) {
+            renderBackups(data.backups);
+        } else {
+            showAlert(data.error || 'Failed to load backups', 'error');
+        }
+    } catch (e) {
+        console.error('Load backups error:', e);
+        showAlert('Network error', 'error');
+    }
+}
+
+function renderBackups(backups) {
+    const list = document.getElementById('backupsList');
+
+    if (!backups || backups.length === 0) {
+        list.innerHTML = '<div class="text-center py-8 text-slate-500">No backups available</div>';
+        return;
+    }
+
+    const items = backups.map(backup => {
+        const date = new Date(backup.timestamp);
+        const dateStr = date.toLocaleString('id-ID');
+        const sizeKB = (backup.size / 1024).toFixed(2);
+
+        return `
+            <div class="border border-slate-200 rounded-xl p-4 mb-3 hover:border-[#115E59] transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="font-mono text-sm font-semibold text-slate-700">${backup.filename}</div>
+                        <div class="text-xs text-slate-500 mt-1">
+                            📅 ${dateStr} • 💾 ${sizeKB} KB
+                        </div>
+                    </div>
+                    <button onclick="showRestoreModal('${backup.filename}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition-colors">
+                        Restore
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    list.innerHTML = items;
+}
+
+async function createBackup() {
+    showAlert('Creating backup...', 'info');
+
+    try {
+        const res = await fetch('/admin/api/config/backup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            showAlert('Backup created successfully', 'success');
+            loadBackups();
+        } else {
+            showAlert(data.error || 'Failed to create backup', 'error');
+        }
+    } catch (e) {
+        showAlert('Network error: ' + e.message, 'error');
+    }
+}
+
+function showRestoreModal(filename) {
+    selectedBackupFile = filename;
+    document.getElementById('restoreFileName').textContent = filename;
+    document.getElementById('restoreModal').classList.remove('hidden');
+}
+
+function closeRestoreModal() {
+    selectedBackupFile = null;
+    document.getElementById('restoreModal').classList.add('hidden');
+}
+
+async function confirmRestore() {
+    if (!selectedBackupFile) return;
+
+    closeRestoreModal();
+    showAlert('Restoring configuration...', 'info');
+
+    try {
+        const res = await fetch('/admin/api/config/restore', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ backup_file: selectedBackupFile })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            showAlert(data.message || 'Configuration restored. Please restart application.', 'success');
+            loadBackups();
+        } else {
+            showAlert(data.error || 'Failed to restore configuration', 'error');
+        }
+    } catch (e) {
+        showAlert('Network error: ' + e.message, 'error');
+    }
+}
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+
+    alertBox.className = `border rounded-[16px] p-4 text-sm ${colors[type] || colors.info}`;
+    alertBox.textContent = message;
+    alertBox.classList.remove('hidden');
+
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            alertBox.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+// Load on page load
+loadBackups();
+</script>
+{% endblock %}

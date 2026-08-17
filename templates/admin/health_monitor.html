@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% block title %}Health Monitor · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+                <a href="/admin/integration-center" class="text-slate-600 hover:text-[#115E59] transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">System Health Monitor</h1>
+                    <p class="text-sm text-slate-600 mt-1">Monitoring kesehatan sistem dan alert otomatis</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="autoRefreshIndicator" class="text-xs text-slate-500">Auto-refresh: 30s</div>
+                <button onclick="refreshHealth()" class="px-4 py-2 bg-[#115E59] hover:bg-[#0D4A47] text-white rounded-xl text-sm font-semibold transition-colors">
+                    Refresh Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Status Banner -->
+    <div id="overallStatus" class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div id="overallIndicator" class="w-4 h-4 rounded-full bg-slate-300"></div>
+                <div>
+                    <div class="text-lg font-bold text-slate-700">Overall System Status</div>
+                    <div id="overallText" class="text-sm text-slate-500">Loading...</div>
+                </div>
+            </div>
+            <div id="lastUpdate" class="text-xs text-slate-500">Last update: --</div>
+        </div>
+    </div>
+
+    <!-- Health Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="healthGrid">
+        <!-- Loading state -->
+        <div class="col-span-full text-center py-12 text-slate-500">
+            <div class="animate-pulse">Loading health status...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let autoRefreshTimer = null;
+
+async function refreshHealth() {
+    try {
+        const res = await fetch('/admin/api/health');
+        const data = await res.json();
+
+        if (data.ok) {
+            renderHealthStatus(data.health);
+            updateLastUpdateTime();
+        } else {
+            showError('Failed to fetch health status');
+        }
+    } catch (e) {
+        console.error('Health check error:', e);
+        showError('Network error');
+    }
+}
+
+function renderHealthStatus(health) {
+    const grid = document.getElementById('healthGrid');
+
+    // Calculate overall status
+    const statuses = Object.values(health).map(h => h.status);
+    const hasRed = statuses.includes('RED');
+    const hasYellow = statuses.includes('YELLOW');
+
+    let overallStatus = 'GREEN';
+    let overallText = 'All systems operational';
+    let overallColor = 'bg-green-500';
+
+    if (hasRed) {
+        overallStatus = 'RED';
+        overallText = 'Critical issues detected';
+        overallColor = 'bg-red-500';
+    } else if (hasYellow) {
+        overallStatus = 'YELLOW';
+        overallText = 'Some services degraded';
+        overallColor = 'bg-amber-500';
+    }
+
+    document.getElementById('overallIndicator').className = `w-4 h-4 rounded-full ${overallColor}`;
+    document.getElementById('overallText').textContent = overallText;
+
+    // Render individual cards
+    const cards = Object.entries(health).map(([name, info]) => {
+        const statusColor = {
+            'GREEN': 'bg-green-500',
+            'YELLOW': 'bg-amber-500',
+            'RED': 'bg-red-500',
+            'GRAY': 'bg-slate-300'
+        }[info.status] || 'bg-slate-300';
+
+        const statusText = {
+            'GREEN': 'Healthy',
+            'YELLOW': 'Degraded',
+            'RED': 'Failed',
+            'GRAY': 'Not Configured'
+        }[info.status] || 'Unknown';
+
+        return `
+            <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="text-2xl">${getServiceIcon(name)}</div>
+                    <div class="w-3 h-3 rounded-full ${statusColor}"></div>
+                </div>
+                <h3 class="text-base font-bold text-[#115E59] mb-1">${name}</h3>
+                <div class="text-xs text-slate-600 mb-2">${statusText}</div>
+                <div class="text-xs text-slate-500">${info.message || ''}</div>
+                ${info.details ? `<div class="text-xs text-slate-400 mt-2">${info.details}</div>` : ''}
+            </div>
+        `;
+    });
+
+    grid.innerHTML = cards.join('');
+}
+
+function getServiceIcon(name) {
+    const icons = {
+        'Application': '⚙️',
+        'Gunicorn': '🦄',
+        'Port 2100': '🔌',
+        'Database': '💾',
+        'Digiflazz': '📡',
+        'PaymentKita': '💳',
+        'Pakasir': '🛒',
+        'Telegram': '✈️',
+        'Firebase': '🔥',
+        'Cloudflare': '☁️'
+    };
+    return icons[name] || '🔧';
+}
+
+function updateLastUpdateTime() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('id-ID');
+    document.getElementById('lastUpdate').textContent = `Last update: ${timeStr}`;
+}
+
+function showError(message) {
+    const grid = document.getElementById('healthGrid');
+    grid.innerHTML = `
+        <div class="col-span-full text-center py-12">
+            <div class="text-red-600 font-semibold mb-2">⚠️ Error</div>
+            <div class="text-slate-500">${message}</div>
+        </div>
+    `;
+}
+
+function startAutoRefresh() {
+    // Clear existing timer
+    if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+    }
+
+    // Set new timer for 30 seconds
+    autoRefreshTimer = setInterval(() => {
+        refreshHealth();
+    }, 30000);
+}
+
+// Initial load
+refreshHealth();
+startAutoRefresh();
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer);
+    }
+});
+</script>
+{% endblock %}

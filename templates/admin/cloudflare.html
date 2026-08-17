@@ -22,7 +22,7 @@
                 Loading...
             </div>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="p-4 bg-slate-50 rounded-xl">
                 <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Connection Status</div>
@@ -64,7 +64,7 @@
     <!-- Configuration -->
     <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
         <h2 class="text-lg font-bold text-[#115E59] mb-4">Configuration</h2>
-        
+
         <div class="space-y-4">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Tunnel Token</label>
@@ -89,12 +89,12 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
                 Save
             </button>
-            
+
             <button onclick="testConnection()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 Test Connection
             </button>
-            
+
             <button onclick="reloadConfiguration()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Reload
@@ -113,7 +113,7 @@
                 <p class="text-sm text-blue-700">Ikuti langkah-langkah berikut untuk konfigurasi Cloudflare Tunnel</p>
             </div>
         </div>
-        
+
         <div class="space-y-4">
             <div class="flex items-start gap-3">
                 <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
@@ -178,7 +178,7 @@ async function loadConfiguration() {
     try {
         const res = await fetch('/admin/api/cloudflare/config');
         const data = await res.json();
-        
+
         if (data.ok) {
             // Update badge status
             const badge = document.getElementById('cloudflare-status-badge');
@@ -189,7 +189,7 @@ async function loadConfiguration() {
                 badge.className = 'px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider rounded-full';
                 badge.textContent = 'Not Configured';
             }
-            
+
             // Fill form
             if (data.config) {
                 document.getElementById('tunnel-token').value = data.config.CLOUDFLARE_TUNNEL_TOKEN || '';
@@ -206,7 +206,7 @@ async function loadStatus() {
     try {
         const res = await fetch('/admin/api/cloudflare/status');
         const data = await res.json();
-        
+
         if (data.ok) {
             document.getElementById('cf-connection-status').textContent = data.connection_status || '-';
             document.getElementById('cf-tunnel-status').textContent = data.tunnel_status || '-';
@@ -214,7 +214,7 @@ async function loadStatus() {
             document.getElementById('cf-hostname').textContent = data.hostname || '-';
             document.getElementById('cf-service').textContent = data.service || '-';
             document.getElementById('cf-last-check').textContent = data.last_check || '-';
-            
+
             if (data.last_error) {
                 document.getElementById('cf-error-container').classList.remove('hidden');
                 document.getElementById('cf-last-error').textContent = data.last_error;
@@ -231,7 +231,7 @@ async function saveConfiguration() {
     const token = document.getElementById('tunnel-token').value.trim();
     const tunnelName = document.getElementById('tunnel-name').value.trim();
     const accountId = document.getElementById('account-id').value.trim();
-    
+
     if (!token) {
         Swal.fire({
             icon: 'warning',
@@ -241,16 +241,16 @@ async function saveConfiguration() {
         });
         return;
     }
-    
+
     Swal.fire({
         title: 'Menyimpan Konfigurasi...',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
-    
+
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        
+
         if (!csrfToken) {
             Swal.fire({
                 icon: 'error',
@@ -260,7 +260,7 @@ async function saveConfiguration() {
             });
             return;
         }
-        
+
         const res = await fetch('/admin/api/cloudflare/save', {
             method: 'POST',
             headers: {
@@ -274,7 +274,7 @@ async function saveConfiguration() {
                 account_id: accountId
             })
         });
-        
+
         if (!res.ok) {
             const errorText = await res.text();
             let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
@@ -285,7 +285,7 @@ async function saveConfiguration() {
                 // Jika response bukan JSON, gunakan text
                 if (errorText) errorMsg = errorText.substring(0, 200);
             }
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Gagal Menyimpan',
@@ -294,9 +294,9 @@ async function saveConfiguration() {
             });
             return;
         }
-        
+
         const data = await res.json();
-        
+
         if (data.ok) {
             Swal.fire({
                 icon: 'success',
@@ -326,7 +326,7 @@ async function saveConfiguration() {
 
 async function testConnection() {
     const token = document.getElementById('tunnel-token').value.trim();
-    
+
     if (!token) {
         Swal.fire({
             icon: 'warning',
@@ -336,14 +336,14 @@ async function testConnection() {
         });
         return;
     }
-    
+
     Swal.fire({
         title: 'Testing Connection...',
         text: 'Memvalidasi Tunnel Token',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
-    
+
     try {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const res = await fetch('/admin/api/cloudflare/test', {
@@ -355,19 +355,21 @@ async function testConnection() {
             credentials: 'same-origin',
             body: JSON.stringify({ tunnel_token: token })
         });
-        
+
         const data = await res.json();
-        
+
         if (data.ok) {
             if (data.is_valid) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Connected!',
+                    title: 'Token Format Valid',
                     html: `
                         <div class="text-left space-y-2">
                             <p><strong>Status:</strong> ${data.status}</p>
-                            ${data.tunnel_name ? `<p><strong>Tunnel Name:</strong> ${data.tunnel_name}</p>` : ''}
-                            ${data.message ? `<p class="text-sm text-slate-600">${data.message}</p>` : ''}
+                            ${data.tunnel_id ? `<p><strong>Tunnel ID:</strong> ${data.tunnel_id}</p>` : ''}
+                            ${data.account_tag ? `<p><strong>Account Tag:</strong> ${data.account_tag}</p>` : ''}
+                            ${data.message ? `<p class="text-sm text-slate-600 mt-2">${data.message}</p>` : ''}
+                            <p class="text-xs text-amber-600 mt-3"><strong>Note:</strong> Ini hanya validasi format token. Untuk verifikasi koneksi aktual, lihat Status Panel di atas.</p>
                         </div>
                     `,
                     confirmButtonColor: '#115E59'
@@ -375,7 +377,7 @@ async function testConnection() {
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Connection Failed',
+                    title: 'Token Validation Failed',
                     text: data.error || 'Token tidak valid atau format salah'
                 });
             }
@@ -398,7 +400,7 @@ async function testConnection() {
 function reloadConfiguration() {
     loadConfiguration();
     loadStatus();
-    
+
     Swal.fire({
         toast: true,
         position: 'top-end',

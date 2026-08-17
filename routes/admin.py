@@ -129,7 +129,7 @@ def products_save():
                    base_price=base_price, margin=margin,
                    description=data.get("description", ""),
                    is_active=int(data.get("is_active", 1)))
-    
+
     # --- BYPASS LANGGANAN START ---
     try:
         import sqlite3
@@ -181,12 +181,12 @@ def users_adjust_balance(uid):
             conn_promo = get_conn()
             res_set = conn_promo.execute("SELECT value FROM settings WHERE key='min_depo_reseller'").fetchone()
             min_depo = int(res_set['value']) if res_set else 100000
-            
+
             # Jika nominal yang ditambahkan admin mencapai target
             if delta >= min_depo:
                 conn_promo.execute("UPDATE users SET level='reseller' WHERE id=?", (uid,))
                 conn_promo.commit() # Simpan perubahan level ke database
-                
+
             conn_promo.close()
         except Exception as e:
             pass
@@ -304,7 +304,7 @@ def pricelist_fetch():
     for it in items:
         item_cat = it.get("category", "").lower()
         item_brand = it.get("brand", "").lower()
-        
+
         is_match = False
         if cmd == "pasca":
             # Jika mode Pasca, kategori dari Digiflazz pasti "pascabayar"
@@ -556,14 +556,14 @@ def monitor_stats():
     from flask import jsonify
     if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
         return jsonify({"ok": False}), 403
-    
+
     from models import get_conn
     import datetime
     conn = get_conn()
     limit_time = (datetime.datetime.now() - datetime.timedelta(minutes=5)).strftime('%Y-%m-%d %H:%M:%S')
     alert_count = conn.execute("SELECT COUNT(*) FROM transactions WHERE status='pending' AND created_at < ?", (limit_time,)).fetchone()[0]
     conn.close()
-    
+
     return jsonify({"ok": True, "alert_pending": alert_count})
 
 @admin_bp.route("/users/approve", methods=["POST"])
@@ -604,15 +604,15 @@ def reset_password():
 def web_backup():
     if current_user.role != "admin":
         return jsonify({"error": "Unauthorized"}), 403
-        
+
     import zipfile
     from datetime import datetime
     from flask import send_file
-    
+
     timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M")
     zip_filename = f"Backup_PayPoint_{timestamp}.zip"
     zip_filepath = f"/tmp/{zip_filename}"
-    
+
     # Proses membungkus folder menjadi ZIP (Mengabaikan file sampah/berat)
     with zipfile.ZipFile(zip_filepath, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk("/root/web_ppob"):
@@ -621,7 +621,7 @@ def web_backup():
             for file in files:
                 file_path = os.path.join(root, file)
                 zipf.write(file_path, os.path.join("web_ppob", os.path.relpath(file_path, "/root/web_ppob")))
-                
+
     return send_file(zip_filepath, as_attachment=True, download_name=zip_filename)
 
 import hashlib
@@ -657,10 +657,10 @@ def tiket_deposit():
     nominal = data.get('nominal')
     username = os.getenv("DIGIFLAZZ_USER")
     api_key = os.getenv("DIGIFLAZZ_KEY")
-    
+
     sign_str = f"{username}{api_key}deposit"
     sign = hashlib.md5(sign_str.encode('utf-8')).hexdigest()
-    
+
     payload = {
         "username": username,
         "amount": int(nominal),
@@ -668,12 +668,12 @@ def tiket_deposit():
         "owner_name": "Admin MarketData",
         "sign": sign
     }
-    
+
     try:
         url = "https://api.digiflazz.com/v1/deposit"
         response = requests.post(url, json=payload, timeout=15)
         res_data = response.json()
-        
+
         if response.status_code == 200 and 'data' in res_data:
             d = res_data['data']
             # Simpan ke riwayat
@@ -705,27 +705,27 @@ def admin_settings():
 def admin_change_password():
     from flask import request, jsonify
     from flask_login import current_user
-    
+
     if getattr(current_user, 'role', '') != 'admin':
         return jsonify({"status": "error", "msg": "Akses Ditolak!"})
-        
+
     data = request.get_json() or {}
     old_pass = data.get("old_password")
     new_pass = data.get("new_password")
-    
+
     if not current_user.check_password(old_pass):
         return jsonify({"status": "error", "msg": "Password lama yang Anda masukkan salah!"})
-        
+
     try:
         from werkzeug.security import generate_password_hash
         from models import get_conn
-        
+
         # INI DIA STRUKTUR ASLI WEB BOS!
         conn = get_conn()
         conn.execute("UPDATE users SET password_hash=? WHERE id=?", (generate_password_hash(new_pass), current_user.id))
         conn.commit()
         conn.close()
-        
+
         return jsonify({"status": "success", "msg": "Password Admin berhasil diperbarui dengan aman! 🔐"})
     except Exception as e:
         return jsonify({"status": "error", "msg": f"System Error: {str(e)}"})
@@ -806,7 +806,7 @@ def delete_user_route(uid):
     # Proteksi Anti-Blunder: Jangan sampai Admin bunuh diri
     if uid == 1 or uid == current_user.id:
         return jsonify({"ok": False, "error": "Tidak bisa menghapus akun Admin Utama!"}), 400
-        
+
     from models import get_conn
     conn = get_conn()
     try:
@@ -833,11 +833,11 @@ def reset_user_pin():
     data = request.get_json() or {}
     uid = data.get("user_id")
     if not uid: return jsonify({"ok": False, "error": "User ID tidak valid"}), 400
-    
+
     # Generate random 6-digit PIN and hash it
     random_pin = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
     pin_hash = bcrypt.hashpw(random_pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+
     from models import get_conn
     conn = get_conn()
     try:
@@ -855,32 +855,32 @@ def reset_user_pin():
 def laba_report():
     from models import get_conn
     conn = get_conn()
-    
+
     # Hitung Hari Ini
     t_today = conn.execute('''
-        SELECT COUNT(t.id), SUM(t.price), SUM(p.base_price) 
-        FROM transactions t JOIN products p ON t.sku = p.sku 
-        WHERE (LOWER(t.status) IN ('sukses', 'success')) 
+        SELECT COUNT(t.id), SUM(t.price), SUM(p.base_price)
+        FROM transactions t JOIN products p ON t.sku = p.sku
+        WHERE (LOWER(t.status) IN ('sukses', 'success'))
         AND date(t.created_at, '+7 hours') = date('now', '+7 hours')
     ''').fetchone()
-    
+
     # Hitung Bulan Ini
     t_month = conn.execute('''
-        SELECT COUNT(t.id), SUM(t.price), SUM(p.base_price) 
-        FROM transactions t JOIN products p ON t.sku = p.sku 
-        WHERE (LOWER(t.status) IN ('sukses', 'success')) 
+        SELECT COUNT(t.id), SUM(t.price), SUM(p.base_price)
+        FROM transactions t JOIN products p ON t.sku = p.sku
+        WHERE (LOWER(t.status) IN ('sukses', 'success'))
         AND strftime('%Y-%m', t.created_at, '+7 hours') = strftime('%Y-%m', 'now', '+7 hours')
     ''').fetchone()
-    
+
     # Hitung Keseluruhan
     t_all = conn.execute('''
-        SELECT COUNT(t.id), SUM(t.price), SUM(p.base_price) 
-        FROM transactions t JOIN products p ON t.sku = p.sku 
+        SELECT COUNT(t.id), SUM(t.price), SUM(p.base_price)
+        FROM transactions t JOIN products p ON t.sku = p.sku
         WHERE (LOWER(t.status) IN ('sukses', 'success'))
     ''').fetchone()
-    
+
     conn.close()
-    
+
     stats = {
         'today': {'trx': t_today[0] or 0, 'omzet': t_today[1] or 0, 'modal': t_today[2] or 0, 'laba': (t_today[1] or 0) - (t_today[2] or 0)},
         'month': {'trx': t_month[0] or 0, 'omzet': t_month[1] or 0, 'modal': t_month[2] or 0, 'laba': (t_month[1] or 0) - (t_month[2] or 0)},
@@ -895,11 +895,11 @@ def laba_report():
 def api_broadcast():
     if current_user.role != "admin":
         return jsonify({"ok": False, "error": "Akses Ditolak!"}), 403
-    
+
     data = request.get_json() or {}
     title = data.get("title", "Garuda Tell Info")
     body = data.get("body", "")
-    
+
     try:
         import fcm_helper
         succ, fail = fcm_helper.send_broadcast_notification(title, body)
@@ -930,7 +930,7 @@ def update_riwayat_depo():
     data = request.json
     idx = data.get("index")
     action = data.get("action")
-    
+
     try:
         hist = load_deposit_history()
         if 0 <= idx < len(hist):
@@ -942,7 +942,7 @@ def update_riwayat_depo():
             return jsonify({"ok": True})
     except Exception as e:
         print("Error Update Riwayat:", e)
-        
+
     return jsonify({"ok": False})
 
 
@@ -1030,9 +1030,9 @@ def api_firebase_config():
     try:
         import json
         import os
-        
+
         cred_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firebase_credentials.json")
-        
+
         if not os.path.exists(cred_path):
             return jsonify({
                 "ok": True,
@@ -1041,10 +1041,10 @@ def api_firebase_config():
                 "sender_id": None,
                 "client_email": None
             })
-        
+
         with open(cred_path, 'r') as f:
             cred_data = json.load(f)
-        
+
         return jsonify({
             "ok": True,
             "is_configured": True,
@@ -1062,10 +1062,10 @@ def api_firebase_stats():
     """Get Firebase statistics."""
     try:
         import fcm_helper
-        
+
         # Get registered tokens
         registered = fcm_helper.get_registered_tokens()
-        
+
         # Get last broadcast time from database (if exists)
         from models import get_conn
         conn = get_conn()
@@ -1082,7 +1082,7 @@ def api_firebase_stats():
                 pass  # Table doesn't exist yet
         finally:
             conn.close()
-        
+
         return jsonify({
             "ok": True,
             "total_devices": len(registered),
@@ -1101,12 +1101,12 @@ def api_firebase_test():
     """Test Firebase connection dengan mengirim test notification."""
     try:
         import fcm_helper
-        
+
         success_count, failure_count = fcm_helper.send_broadcast_notification(
             title="🔥 Firebase Test",
             body="Test notification dari Integration Center. Jika kamu melihat ini, Firebase bekerja dengan baik!"
         )
-        
+
         return jsonify({
             "ok": True,
             "success_count": success_count,
@@ -1123,23 +1123,23 @@ def api_firebase_validate():
     try:
         import fcm_helper
         from models import get_conn
-        
+
         # Get all registered tokens
         registered = fcm_helper.get_registered_tokens()
         tokens = [r["fcm_token"] for r in registered]
-        
+
         if not tokens:
             return jsonify({
                 "ok": True,
                 "valid_count": 0,
                 "invalid_count": 0
             })
-        
+
         # Validate tokens
         validation_result = fcm_helper.validate_tokens(tokens)
         valid_count = validation_result["valid_count"]
         invalid_tokens = validation_result["invalid_tokens"]
-        
+
         # Clean up invalid tokens
         if invalid_tokens:
             conn = get_conn()
@@ -1152,7 +1152,7 @@ def api_firebase_validate():
                 conn.commit()
             finally:
                 conn.close()
-        
+
         return jsonify({
             "ok": True,
             "valid_count": valid_count,
@@ -1177,9 +1177,9 @@ def api_cloudflare_config():
     try:
         from config_manager import get_config_manager
         cm = get_config_manager()
-        
+
         provider = cm.get_provider("cloudflare")
-        
+
         return jsonify({
             "ok": True,
             "is_configured": provider["is_configured"] if provider else False,
@@ -1196,10 +1196,12 @@ def api_cloudflare_status():
     try:
         from config_manager import get_config_manager
         from datetime import datetime
-        
+        import subprocess
+        import shutil
+
         cm = get_config_manager()
         provider = cm.get_provider("cloudflare")
-        
+
         if not provider or not provider["is_configured"]:
             return jsonify({
                 "ok": True,
@@ -1211,21 +1213,76 @@ def api_cloudflare_status():
                 "last_check": "-",
                 "last_error": None
             })
-        
+
         config = provider["config"]
         tunnel_name = config.get("CLOUDFLARE_TUNNEL_NAME") or "unnamed-tunnel"
-        
-        # Status dummy untuk sekarang (belum ada actual check)
-        # Ini akan diimplementasikan saat cloudflared sudah installed
+
+        # Check if cloudflared is installed
+        cloudflared_path = shutil.which("cloudflared")
+
+        if not cloudflared_path:
+            # Check common installation paths
+            common_paths = [
+                "/usr/local/bin/cloudflared",
+                "/usr/bin/cloudflared",
+                "/bin/cloudflared"
+            ]
+            for path in common_paths:
+                if os.path.exists(path):
+                    cloudflared_path = path
+                    break
+
+        if not cloudflared_path:
+            return jsonify({
+                "ok": True,
+                "connection_status": "Configured",
+                "tunnel_status": "Cloudflared Not Installed",
+                "tunnel_name": tunnel_name,
+                "hostname": "-",
+                "service": "http://localhost:2100",
+                "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "last_error": "cloudflared binary not found. Install: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
+            })
+
+        # Get cloudflared version
+        try:
+            result = subprocess.run(
+                [cloudflared_path, "--version"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            version = result.stdout.strip() if result.returncode == 0 else "Unknown"
+        except Exception:
+            version = "Unknown"
+
+        # Check if service is running (systemd)
+        service_status = "Unknown"
+        try:
+            result = subprocess.run(
+                ["systemctl", "is-active", "cloudflared"],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0 and result.stdout.strip() == "active":
+                service_status = "Running"
+            else:
+                service_status = "Stopped"
+        except Exception:
+            service_status = "Service Not Configured"
+
         return jsonify({
             "ok": True,
             "connection_status": "Configured",
-            "tunnel_status": "Unknown",
+            "tunnel_status": service_status,
             "tunnel_name": tunnel_name,
             "hostname": "*.garudatell.com",
             "service": "http://localhost:2100",
             "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "last_error": "Status check requires cloudflared installed"
+            "cloudflared_version": version,
+            "cloudflared_path": cloudflared_path,
+            "last_error": None if service_status == "Running" else f"Service status: {service_status}"
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1237,34 +1294,34 @@ def api_cloudflare_save():
     """Save Cloudflare configuration."""
     try:
         from config_manager import get_config_manager
-        
+
         data = request.get_json() or {}
         tunnel_token = data.get("tunnel_token", "").strip()
         tunnel_name = data.get("tunnel_name", "").strip()
         account_id = data.get("account_id", "").strip()
-        
+
         if not tunnel_token:
             return jsonify({"ok": False, "error": "Tunnel token wajib diisi"}), 400
-        
+
         # Basic validation
         if not tunnel_token.startswith("eyJ"):
             return jsonify({"ok": False, "error": "Token format tidak valid (harus dimulai dengan eyJ)"}), 400
-        
+
         cm = get_config_manager()
-        
+
         updates = {
             "CLOUDFLARE_TUNNEL_TOKEN": tunnel_token
         }
-        
+
         if tunnel_name:
             updates["CLOUDFLARE_TUNNEL_NAME"] = tunnel_name
-        
+
         if account_id:
             updates["CLOUDFLARE_ACCOUNT_ID"] = account_id
-        
+
         # Save to .env via ConfigManager
         cm.update_config(updates, backup=True)
-        
+
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1277,18 +1334,18 @@ def api_cloudflare_test():
     try:
         data = request.get_json() or {}
         tunnel_token = data.get("tunnel_token", "").strip()
-        
+
         if not tunnel_token:
             return jsonify({"ok": False, "error": "Tunnel token tidak boleh kosong"}), 400
-        
-        # Validation 1: Format check
+
+        # Validation 1: Format check (Cloudflare tokens start with eyJ - base64 encoded JSON)
         if not tunnel_token.startswith("eyJ"):
             return jsonify({
                 "ok": True,
                 "is_valid": False,
                 "error": "Token format tidak valid. Token harus dimulai dengan 'eyJ'"
             })
-        
+
         # Validation 2: Length check
         if len(tunnel_token) < 100:
             return jsonify({
@@ -1296,55 +1353,67 @@ def api_cloudflare_test():
                 "is_valid": False,
                 "error": "Token terlalu pendek. Pastikan token lengkap"
             })
-        
-        # Validation 3: Base64 decode check (JWT format)
+
+        # Validation 3: Cloudflare Tunnel Token validation
+        # Note: Cloudflare tunnel tokens are base64-encoded JSON (single string),
+        # NOT standard JWT with 3 parts (header.payload.signature)
         import base64
         import json
-        
+
         try:
-            # Decode token header (first part before first dot)
-            token_parts = tunnel_token.split('.')
-            if len(token_parts) < 2:
+            # Add padding if needed for base64 decode
+            padding = 4 - (len(tunnel_token) % 4)
+            padded_token = tunnel_token + ('=' * padding if padding != 4 else '')
+
+            # Decode base64 to get JSON
+            decoded_bytes = base64.urlsafe_b64decode(padded_token)
+            token_json = json.loads(decoded_bytes)
+
+            # Validate Cloudflare tunnel token structure
+            # Required fields: a (AccountTag), t (TunnelID), s (TunnelSecret)
+            required_fields = ['a', 't', 's']
+            missing_fields = [f for f in required_fields if f not in token_json]
+
+            if missing_fields:
                 return jsonify({
                     "ok": True,
                     "is_valid": False,
-                    "error": "Token format JWT tidak valid"
+                    "error": f"Token tidak lengkap. Missing fields: {', '.join(missing_fields)}"
                 })
-            
-            # Decode header
-            header_data = token_parts[0]
-            # Add padding if needed
-            padding = 4 - (len(header_data) % 4)
-            if padding != 4:
-                header_data += '=' * padding
-            
-            decoded_header = base64.urlsafe_b64decode(header_data)
-            header_json = json.loads(decoded_header)
-            
-            # Basic JWT validation
-            if "typ" not in header_json and "alg" not in header_json:
-                return jsonify({
-                    "ok": True,
-                    "is_valid": False,
-                    "error": "Token bukan format JWT yang valid"
-                })
-            
-        except Exception:
+
+            # Extract tunnel info
+            account_tag = token_json.get('a', '')
+            tunnel_id = token_json.get('t', '')
+
+            # If all validations pass
+            return jsonify({
+                "ok": True,
+                "is_valid": True,
+                "status": "Token format valid",
+                "message": "Token Cloudflare Tunnel berhasil divalidasi. Simpan konfigurasi untuk menggunakan tunnel.",
+                "tunnel_id": tunnel_id[:8] + '...' if tunnel_id else None,  # Show partial ID only
+                "account_tag": account_tag[:8] + '...' if account_tag else None  # Show partial tag only
+            })
+
+        except base64.binascii.Error:
             return jsonify({
                 "ok": True,
                 "is_valid": False,
-                "error": "Gagal decode token. Pastikan token benar"
+                "error": "Token format base64 tidak valid"
             })
-        
-        # If all validations pass
-        return jsonify({
-            "ok": True,
-            "is_valid": True,
-            "status": "Token format valid",
-            "message": "Token berhasil divalidasi. Simpan konfigurasi untuk menggunakan tunnel.",
-            "tunnel_name": None  # Actual name will be known after service start
-        })
-        
+        except json.JSONDecodeError:
+            return jsonify({
+                "ok": True,
+                "is_valid": False,
+                "error": "Token bukan format JSON yang valid"
+            })
+        except Exception as e:
+            return jsonify({
+                "ok": True,
+                "is_valid": False,
+                "error": f"Gagal validasi token: {str(e)}"
+            })
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -1378,9 +1447,9 @@ def api_notification_statistics():
     try:
         from notification_engine import get_notification_engine
         engine = get_notification_engine()
-        
+
         stats = engine.get_statistics()
-        
+
         return jsonify({
             "ok": True,
             "stats": stats
@@ -1396,9 +1465,9 @@ def api_notification_channels():
     try:
         from notification_engine import get_notification_engine
         engine = get_notification_engine()
-        
+
         channels = engine.get_all_channels()
-        
+
         return jsonify({
             "ok": True,
             "channels": channels
@@ -1414,10 +1483,10 @@ def api_notification_history():
     try:
         from notification_engine import get_notification_engine
         engine = get_notification_engine()
-        
+
         limit = int(request.args.get('limit', 50))
         history = engine.get_broadcast_history(limit=limit)
-        
+
         return jsonify({
             "ok": True,
             "history": history
@@ -1433,7 +1502,7 @@ def api_notification_target_counts():
     try:
         from models import get_conn
         conn = get_conn()
-        
+
         counts = {
             'all': conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
             'reseller': conn.execute("SELECT COUNT(*) FROM users WHERE role='reseller'").fetchone()[0],
@@ -1441,9 +1510,9 @@ def api_notification_target_counts():
             'kasir': conn.execute("SELECT COUNT(*) FROM users WHERE role='kasir'").fetchone()[0],
             'admin': conn.execute("SELECT COUNT(*) FROM users WHERE role='admin'").fetchone()[0],
         }
-        
+
         conn.close()
-        
+
         return jsonify({
             "ok": True,
             "counts": counts
@@ -1458,22 +1527,22 @@ def api_notification_broadcast():
     """Send broadcast notification."""
     try:
         from notification_engine import get_notification_engine
-        
+
         data = request.get_json() or {}
         title = data.get('title', '').strip()
         message = data.get('message', '').strip()
         image_url = data.get('image_url', '').strip()
         target_type = data.get('target_type', 'all')
         channels = data.get('channels', [])
-        
+
         if not title or not message:
             return jsonify({"ok": False, "error": "Title and message are required"}), 400
-        
+
         if not channels:
             return jsonify({"ok": False, "error": "At least one channel is required"}), 400
-        
+
         engine = get_notification_engine()
-        
+
         # Create broadcast
         broadcast_id = engine.create_broadcast(
             title=title,
@@ -1483,22 +1552,22 @@ def api_notification_broadcast():
             created_by=current_user.id,
             image_url=image_url if image_url else None
         )
-        
+
         if not broadcast_id:
             return jsonify({"ok": False, "error": "Failed to create broadcast"}), 500
-        
+
         # Add to queue
         engine.add_to_queue(broadcast_id, target_type, channels)
-        
+
         # Send immediately
         result = engine.send_broadcast(broadcast_id)
-        
+
         return jsonify({
             "ok": True,
             "broadcast_id": broadcast_id,
             "result": result
         })
-        
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -1521,9 +1590,9 @@ def api_whatsapp_config():
     try:
         from config_manager import get_config_manager
         cm = get_config_manager()
-        
+
         provider = cm.get_provider("whatsapp")
-        
+
         return jsonify({
             "ok": True,
             "is_configured": provider["is_configured"] if provider else False,
@@ -1540,9 +1609,9 @@ def api_whatsapp_status():
     try:
         from whatsapp_adapter import get_whatsapp_adapter
         adapter = get_whatsapp_adapter()
-        
+
         status = adapter.get_connection_status()
-        
+
         return jsonify({
             "ok": True,
             "status": status
@@ -1557,16 +1626,16 @@ def api_whatsapp_pair():
     """Generate pairing code for WhatsApp."""
     try:
         from whatsapp_adapter import get_whatsapp_adapter
-        
+
         data = request.get_json() or {}
         phone_number = data.get("phone_number", "").strip()
-        
+
         if not phone_number:
             return jsonify({"ok": False, "error": "Phone number is required"}), 400
-        
+
         adapter = get_whatsapp_adapter()
         result = adapter.generate_pairing_code(phone_number)
-        
+
         if result.get("success"):
             return jsonify({
                 "ok": True,
@@ -1578,7 +1647,7 @@ def api_whatsapp_pair():
                 "ok": False,
                 "error": result.get("error", "Failed to generate code")
             })
-            
+
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -1590,9 +1659,9 @@ def api_whatsapp_reconnect():
     try:
         from whatsapp_adapter import get_whatsapp_adapter
         adapter = get_whatsapp_adapter()
-        
+
         result = adapter.restart_session()
-        
+
         return jsonify({
             "ok": result.get("success", False),
             "error": result.get("error")
@@ -1608,9 +1677,9 @@ def api_whatsapp_restart():
     try:
         from whatsapp_adapter import get_whatsapp_adapter
         adapter = get_whatsapp_adapter()
-        
+
         result = adapter.restart_session()
-        
+
         return jsonify({
             "ok": result.get("success", False),
             "error": result.get("error")
@@ -1626,9 +1695,9 @@ def api_whatsapp_disconnect():
     try:
         from whatsapp_adapter import get_whatsapp_adapter
         adapter = get_whatsapp_adapter()
-        
+
         result = adapter.disconnect()
-        
+
         return jsonify({
             "ok": result.get("success", False),
             "error": result.get("error")
@@ -1644,9 +1713,9 @@ def api_whatsapp_delete():
     try:
         from whatsapp_adapter import get_whatsapp_adapter
         adapter = get_whatsapp_adapter()
-        
+
         result = adapter.delete_session()
-        
+
         return jsonify({
             "ok": result.get("success", False),
             "error": result.get("error")
@@ -1661,22 +1730,693 @@ def api_whatsapp_test():
     """Send test message via WhatsApp."""
     try:
         from whatsapp_adapter import get_whatsapp_adapter
-        
+
         data = request.get_json() or {}
         phone_number = data.get("phone_number", "").strip()
-        
+
         if not phone_number:
             return jsonify({"ok": False, "error": "Phone number is required"}), 400
-        
+
         adapter = get_whatsapp_adapter()
         result = adapter.send_message(
             phone_number,
             "ðŸ§ª Test message dari GarudaTel WhatsApp Center\n\nJika Anda menerima pesan ini, WhatsApp integration berfungsi dengan baik!"
         )
-        
+
         return jsonify({
             "ok": result.get("success", False),
             "error": result.get("error")
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Digiflazz Integration -----
+@admin_bp.route("/digiflazz")
+@admin_required
+def digiflazz_integration():
+    """Digiflazz PPOB Integration."""
+    return render_template("admin/digiflazz.html")
+
+
+@admin_bp.route("/api/digiflazz/config", methods=["GET"])
+@admin_required
+def api_digiflazz_config():
+    """Get Digiflazz configuration."""
+    try:
+        from config_manager import get_config_manager
+        cm = get_config_manager()
+
+        provider = cm.get_provider("digiflazz")
+
+        return jsonify({
+            "ok": True,
+            "is_configured": provider["is_configured"] if provider else False,
+            "config": provider["config"] if provider else {}
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/digiflazz/save", methods=["POST"])
+@admin_required
+def api_digiflazz_save():
+    """Save Digiflazz configuration."""
+    try:
+        from config_manager import get_config_manager
+
+        data = request.get_json() or {}
+        username = data.get("username", "").strip()
+        api_key = data.get("api_key", "").strip()
+
+        if not username or not api_key:
+            return jsonify({"ok": False, "error": "Username dan API Key wajib diisi"}), 400
+
+        cm = get_config_manager()
+
+        updates = {
+            "DIGIFLAZZ_USER": username,
+            "DIGIFLAZZ_KEY": api_key
+        }
+
+        # Save to .env via ConfigManager
+        cm.update_config(updates, backup=True)
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/digiflazz/test", methods=["POST"])
+@admin_required
+def api_digiflazz_test():
+    """Test Digiflazz connection."""
+    try:
+        import digiflazz
+
+        # Check if configured
+        if not digiflazz._has_credentials():
+            return jsonify({
+                "ok": False,
+                "error": "Digiflazz belum dikonfigurasi. Simpan credentials terlebih dahulu."
+            }), 400
+
+        # Test connection by calling cek_saldo
+        result = digiflazz.cek_saldo()
+
+        if result and result.get("status") == "Sukses":
+            balance = result.get("deposit", 0)
+            return jsonify({
+                "ok": True,
+                "is_valid": True,
+                "balance": balance,
+                "message": "Koneksi ke Digiflazz berhasil"
+            })
+        else:
+            error_msg = result.get("message", "Gagal terhubung ke Digiflazz") if result else "Gagal terhubung ke Digiflazz"
+            return jsonify({
+                "ok": True,
+                "is_valid": False,
+                "error": error_msg
+            })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- PaymentKita Integration -----
+@admin_bp.route("/paymentkita")
+@admin_required
+def paymentkita_integration():
+    """PaymentKita QRIS Integration."""
+    return render_template("admin/paymentkita.html")
+
+
+@admin_bp.route("/api/paymentkita/config", methods=["GET"])
+@admin_required
+def api_paymentkita_config():
+    """Get PaymentKita configuration."""
+    try:
+        from config_manager import get_config_manager
+        cm = get_config_manager()
+
+        provider = cm.get_provider("paymentkita")
+
+        return jsonify({
+            "ok": True,
+            "is_configured": provider["is_configured"] if provider else False,
+            "config": provider["config"] if provider else {},
+            "last_test": provider.get("last_test") if provider else None
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/paymentkita/save", methods=["POST"])
+@admin_required
+def api_paymentkita_save():
+    """Save PaymentKita configuration."""
+    try:
+        from config_manager import get_config_manager
+
+        data = request.get_json() or {}
+        merchant = data.get("merchant", "").strip()
+        secret = data.get("secret", "").strip()
+
+        if not merchant or not secret:
+            return jsonify({"ok": False, "error": "Merchant ID dan Secret Key wajib diisi"}), 400
+
+        cm = get_config_manager()
+
+        updates = {
+            "PAYMENTKITA_MERCHANT": merchant,
+            "PAYMENTKITA_SECRET": secret
+        }
+
+        # Save to .env via ConfigManager
+        cm.update_config(updates, backup=True)
+
+        # Log configuration change
+        _log_config_change("paymentkita", "UPDATED")
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/paymentkita/test", methods=["POST"])
+@admin_required
+def api_paymentkita_test():
+    """Test PaymentKita connection."""
+    try:
+        import paymentkita
+
+        # Check if configured
+        try:
+            merchant, secret = paymentkita.get_credentials()
+        except ValueError as ve:
+            return jsonify({
+                "ok": False,
+                "error": "PaymentKita belum dikonfigurasi. Simpan credentials terlebih dahulu."
+            }), 400
+
+        # Test by creating a test QRIS (small amount)
+        test_ref = f"TEST-{int(time.time())}"
+        result = paymentkita.create_qris_paymentkita(test_ref, 1000)
+
+        if result and result.get("success"):
+            return jsonify({
+                "ok": True,
+                "message": "Koneksi ke PaymentKita berhasil - QRIS dapat dibuat"
+            })
+        else:
+            error_msg = result.get("msg", "Gagal terhubung ke PaymentKita") if result else "Gagal terhubung ke PaymentKita"
+            return jsonify({
+                "ok": False,
+                "error": error_msg
+            })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Pakasir Integration -----
+@admin_bp.route("/pakasir")
+@admin_required
+def pakasir_integration():
+    """Pakasir POS Integration."""
+    return render_template("admin/pakasir.html")
+
+
+@admin_bp.route("/api/pakasir/config", methods=["GET"])
+@admin_required
+def api_pakasir_config():
+    """Get Pakasir configuration."""
+    try:
+        from config_manager import get_config_manager
+        cm = get_config_manager()
+
+        provider = cm.get_provider("pakasir")
+
+        return jsonify({
+            "ok": True,
+            "is_configured": provider["is_configured"] if provider else False,
+            "config": provider["config"] if provider else {},
+            "last_test": provider.get("last_test") if provider else None
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/pakasir/save", methods=["POST"])
+@admin_required
+def api_pakasir_save():
+    """Save Pakasir configuration."""
+    try:
+        from config_manager import get_config_manager
+
+        data = request.get_json() or {}
+        api_key = data.get("api_key", "").strip()
+        project = data.get("project", "").strip()
+
+        if not api_key or not project:
+            return jsonify({"ok": False, "error": "API Key dan Project Name wajib diisi"}), 400
+
+        cm = get_config_manager()
+
+        updates = {
+            "PAKASIR_KEY": api_key,
+            "PAKASIR_PROJECT": project
+        }
+
+        # Save to .env via ConfigManager
+        cm.update_config(updates, backup=True)
+
+        # Log configuration change
+        _log_config_change("pakasir", "UPDATED")
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/pakasir/test", methods=["POST"])
+@admin_required
+def api_pakasir_test():
+    """Test Pakasir configuration."""
+    try:
+        import pakasir
+
+        # Check if configured
+        if not pakasir.is_configured():
+            return jsonify({
+                "ok": False,
+                "error": "Pakasir belum dikonfigurasi. Simpan credentials terlebih dahulu."
+            }), 400
+
+        # Validate by creating test payment URL
+        test_order = f"TEST-{int(time.time())}"
+        result = pakasir.create_qris(1000, test_order)
+
+        if result and result.get("ok") and result.get("payment_url"):
+            return jsonify({
+                "ok": True,
+                "message": "Konfigurasi Pakasir valid - URL pembayaran dapat dibuat"
+            })
+        else:
+            return jsonify({
+                "ok": False,
+                "error": "Gagal membuat payment URL - periksa konfigurasi"
+            })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Telegram Integration -----
+@admin_bp.route("/telegram")
+@admin_required
+def telegram_integration():
+    """Telegram Bot Integration."""
+    return render_template("admin/telegram.html")
+
+
+@admin_bp.route("/api/telegram/config", methods=["GET"])
+@admin_required
+def api_telegram_config():
+    """Get Telegram configuration."""
+    try:
+        from config_manager import get_config_manager
+        cm = get_config_manager()
+
+        provider = cm.get_provider("telegram")
+
+        return jsonify({
+            "ok": True,
+            "is_configured": provider["is_configured"] if provider else False,
+            "config": provider["config"] if provider else {},
+            "last_test": provider.get("last_test") if provider else None
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/telegram/save", methods=["POST"])
+@admin_required
+def api_telegram_save():
+    """Save Telegram configuration."""
+    try:
+        from config_manager import get_config_manager
+
+        data = request.get_json() or {}
+        bot_token = data.get("bot_token", "").strip()
+        chat_id = data.get("chat_id", "").strip()
+
+        if not bot_token or not chat_id:
+            return jsonify({"ok": False, "error": "Bot Token dan Chat ID wajib diisi"}), 400
+
+        cm = get_config_manager()
+
+        updates = {
+            "TELEGRAM_BOT_TOKEN": bot_token,
+            "TELEGRAM_CHAT_ID": chat_id
+        }
+
+        # Save to .env via ConfigManager
+        cm.update_config(updates, backup=True)
+
+        # Log configuration change
+        _log_config_change("telegram", "UPDATED")
+
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/telegram/test", methods=["POST"])
+@admin_required
+def api_telegram_test():
+    """Test Telegram bot connection."""
+    try:
+        token = os.getenv("TELEGRAM_BOT_TOKEN")
+
+        if not token:
+            return jsonify({
+                "ok": False,
+                "error": "Telegram belum dikonfigurasi. Simpan bot token terlebih dahulu."
+            }), 400
+
+        # Test bot using getMe API
+        url = f"https://api.telegram.org/bot{token}/getMe"
+
+        response = requests.get(url, timeout=10)
+        data = response.json()
+
+        if data.get("ok") and data.get("result"):
+            bot_info = data["result"]
+            bot_username = bot_info.get("username", "Unknown")
+            return jsonify({
+                "ok": True,
+                "message": f"Bot connected: @{bot_username}"
+            })
+        else:
+            return jsonify({
+                "ok": False,
+                "error": "Bot token tidak valid atau bot tidak dapat diakses"
+            })
+
+    except requests.Timeout:
+        return jsonify({"ok": False, "error": "Timeout: Telegram API tidak merespons"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Health Monitor -----
+@admin_bp.route("/health-monitor")
+@admin_required
+def health_monitor():
+    """System Health Monitor."""
+    return render_template("admin/health_monitor.html")
+
+
+@admin_bp.route("/api/health", methods=["GET"])
+@admin_required
+def api_health():
+    """Get system health status."""
+    try:
+        health = {}
+
+        # 1. Application
+        health["Application"] = {
+            "status": "GREEN",
+            "message": "Running"
+        }
+
+        # 2. Gunicorn (check if process exists)
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["pgrep", "-f", "gunicorn"],
+                capture_output=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                health["Gunicorn"] = {"status": "GREEN", "message": "Running"}
+            else:
+                health["Gunicorn"] = {"status": "RED", "message": "Not running"}
+        except:
+            health["Gunicorn"] = {"status": "YELLOW", "message": "Cannot check status"}
+
+        # 3. Port 2100
+        try:
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex(('127.0.0.1', 2100))
+            sock.close()
+            if result == 0:
+                health["Port 2100"] = {"status": "GREEN", "message": "Listening"}
+            else:
+                health["Port 2100"] = {"status": "RED", "message": "Not listening"}
+        except:
+            health["Port 2100"] = {"status": "YELLOW", "message": "Cannot check"}
+
+        # 4. Database
+        try:
+            conn = get_conn()
+            conn.execute("SELECT 1").fetchone()
+            conn.close()
+            health["Database"] = {"status": "GREEN", "message": "Connected"}
+        except Exception as e:
+            health["Database"] = {"status": "RED", "message": "Connection failed", "details": str(e)[:50]}
+
+        # 5. Digiflazz
+        try:
+            import digiflazz
+            if digiflazz.is_configured():
+                health["Digiflazz"] = {"status": "GREEN", "message": "Configured"}
+            else:
+                health["Digiflazz"] = {"status": "GRAY", "message": "Not configured"}
+        except:
+            health["Digiflazz"] = {"status": "GRAY", "message": "Not configured"}
+
+        # 6. PaymentKita
+        try:
+            import paymentkita
+            paymentkita.get_credentials()
+            health["PaymentKita"] = {"status": "GREEN", "message": "Configured"}
+        except:
+            health["PaymentKita"] = {"status": "GRAY", "message": "Not configured"}
+
+        # 7. Pakasir
+        try:
+            import pakasir
+            if pakasir.is_configured():
+                health["Pakasir"] = {"status": "GREEN", "message": "Configured"}
+            else:
+                health["Pakasir"] = {"status": "GRAY", "message": "Not configured"}
+        except:
+            health["Pakasir"] = {"status": "GRAY", "message": "Not configured"}
+
+        # 8. Telegram
+        try:
+            token = os.getenv("TELEGRAM_BOT_TOKEN")
+            if token:
+                health["Telegram"] = {"status": "GREEN", "message": "Configured"}
+            else:
+                health["Telegram"] = {"status": "GRAY", "message": "Not configured"}
+        except:
+            health["Telegram"] = {"status": "GRAY", "message": "Not configured"}
+
+        # 9. Firebase/FCM
+        try:
+            fcm_key = os.getenv("FCM_SERVER_KEY")
+            if fcm_key:
+                health["Firebase"] = {"status": "GREEN", "message": "Configured"}
+            else:
+                health["Firebase"] = {"status": "GRAY", "message": "Not configured"}
+        except:
+            health["Firebase"] = {"status": "GRAY", "message": "Not configured"}
+
+        # 10. Cloudflare/cloudflared
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["pgrep", "-f", "cloudflared"],
+                capture_output=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                health["Cloudflare"] = {"status": "GREEN", "message": "Tunnel running"}
+            else:
+                health["Cloudflare"] = {"status": "YELLOW", "message": "Tunnel not running"}
+        except:
+            health["Cloudflare"] = {"status": "GRAY", "message": "Not installed"}
+
+        return jsonify({
+            "ok": True,
+            "health": health
+        })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Configuration Backup -----
+@admin_bp.route("/config-backup")
+@admin_required
+def config_backup():
+    """Configuration Backup Management."""
+    return render_template("admin/config_backup.html")
+
+
+@admin_bp.route("/api/config/backups", methods=["GET"])
+@admin_required
+def api_config_backups():
+    """List available backups."""
+    try:
+        from config_manager import get_config_manager
+        cm = get_config_manager()
+
+        backups = cm.list_backups()
+
+        # Add file size to each backup
+        for backup in backups:
+            try:
+                backup["size"] = os.path.getsize(backup["path"])
+            except:
+                backup["size"] = 0
+
+        return jsonify({
+            "ok": True,
+            "backups": backups
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/config/backup", methods=["POST"])
+@admin_required
+def api_config_backup():
+    """Create new backup."""
+    try:
+        from config_manager import get_config_manager
+        cm = get_config_manager()
+
+        backup_file = cm.backup_env()
+
+        # Log backup creation
+        _log_config_change("system", "BACKUP_CREATED")
+
+        return jsonify({
+            "ok": True,
+            "backup_file": backup_file,
+            "message": "Backup created successfully"
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/config/restore", methods=["POST"])
+@admin_required
+def api_config_restore():
+    """Restore configuration from backup."""
+    try:
+        from config_manager import get_config_manager
+
+        data = request.get_json() or {}
+        backup_file = data.get("backup_file", "").strip()
+
+        if not backup_file:
+            return jsonify({"ok": False, "error": "Backup file required"}), 400
+
+        cm = get_config_manager()
+
+        # Restore from backup (security validation inside restore_backup)
+        cm.restore_backup(backup_file)
+
+        # Log restore
+        _log_config_change("system", "BACKUP_RESTORED")
+
+        return jsonify({
+            "ok": True,
+            "message": "Configuration restored successfully. Please restart application."
+        })
+    except ValueError as ve:
+        return jsonify({"ok": False, "error": str(ve)}), 400
+    except FileNotFoundError as fe:
+        return jsonify({"ok": False, "error": str(fe)}), 404
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Configuration Log -----
+@admin_bp.route("/config-log")
+@admin_required
+def config_log():
+    """Configuration Change Log."""
+    return render_template("admin/config_log.html")
+
+
+@admin_bp.route("/api/config/logs", methods=["GET"])
+@admin_required
+def api_config_logs():
+    """Get configuration change logs."""
+    try:
+        conn = get_conn()
+
+        # Get filter parameters
+        integration = request.args.get('integration', '')
+        action = request.args.get('action', '')
+        limit = int(request.args.get('limit', 100))
+
+        # Build query
+        query = "SELECT * FROM config_changes WHERE 1=1"
+        params = []
+
+        if integration:
+            query += " AND integration = ?"
+            params.append(integration)
+
+        if action:
+            query += " AND action = ?"
+            params.append(action)
+
+        query += " ORDER BY timestamp DESC LIMIT ?"
+        params.append(limit)
+
+        cursor = conn.execute(query, params)
+        logs = []
+
+        for row in cursor.fetchall():
+            logs.append({
+                "id": row["id"],
+                "timestamp": row["timestamp"],
+                "admin_user": row["admin_user"],
+                "integration": row["integration"],
+                "action": row["action"]
+            })
+
+        conn.close()
+
+        return jsonify({
+            "ok": True,
+            "logs": logs
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# ----- Helper function for config logging -----
+def _log_config_change(integration, action):
+    """Log configuration changes to database."""
+    try:
+        conn = get_conn()
+        conn.execute("""
+            INSERT INTO config_changes (timestamp, admin_user, integration, action)
+            VALUES (datetime('now'), ?, ?, ?)
+        """, (current_user.username, integration, action))
+        conn.commit()
+        conn.close()
+    except:
+        pass  # Silent fail - logging is not critical

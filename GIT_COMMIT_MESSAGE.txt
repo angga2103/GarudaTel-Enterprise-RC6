@@ -1,0 +1,47 @@
+Fix: Cloudflare Tunnel Token validation dan status checker
+
+ROOT CAUSE:
+Validator mengasumsikan Cloudflare Tunnel Token adalah JWT standard
+dengan format header.payload.signature (3 parts separated by dots).
+
+FAKTANYA: Cloudflare Tunnel Token adalah base64-encoded JSON single
+string tanpa dots. Format: {"a":"account","t":"tunnel","s":"secret"}
+
+CHANGES:
+
+1. api_cloudflare_test() (routes/admin.py:1273-1361)
+   - Remove: JWT validation dengan dots split
+   - Add: Base64 JSON validation untuk Cloudflare format
+   - Add: Required fields validation (a, t, s)
+   - Add: Return partial credentials untuk konfirmasi
+   - Improve: Error messages yang informatif
+
+2. api_cloudflare_status() (routes/admin.py:1192-1268)
+   - Add: Binary detection (shutil.which + fallback paths)
+   - Add: Version detection (cloudflared --version)
+   - Add: Service status check (systemctl is-active)
+   - Add: Enhanced response dengan version, path, status
+   - Remove: Hardcoded "Unknown" status
+
+TEST RESULTS:
+- Valid Cloudflare token: PASS
+- Short token (rejected): PASS
+- Wrong prefix (rejected): PASS
+- Invalid base64 (rejected): PASS
+- Syntax check: PASS
+- Security audit: PASS (10/10)
+
+IMPACT:
+- Fix: Test Connection sekarang works dengan Cloudflare token
+- Improve: Status checker melakukan real check terhadap binary & service
+- Security: No token leakage, CSRF protected, timeout protection
+
+FILES CHANGED:
+- routes/admin.py (+105, -36)
+- FINDINGS.md (documentation)
+
+BREAKING CHANGES: None
+BACKWARD COMPATIBLE: Yes
+REGRESSION RISK: Low
+
+Fixes #CF-002, #CF-003

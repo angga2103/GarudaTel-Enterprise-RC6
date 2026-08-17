@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% block title %}Configuration Log · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="/admin/integration-center" class="text-slate-600 hover:text-[#115E59] transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">Configuration Log</h1>
+                <p class="text-sm text-slate-600 mt-1">Riwayat perubahan konfigurasi dan audit trail</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Filters</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Integration</label>
+                <select id="filterIntegration" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#115E59] focus:border-transparent">
+                    <option value="">All Integrations</option>
+                    <option value="cloudflare">Cloudflare</option>
+                    <option value="digiflazz">Digiflazz</option>
+                    <option value="paymentkita">PaymentKita</option>
+                    <option value="pakasir">Pakasir</option>
+                    <option value="telegram">Telegram</option>
+                    <option value="firebase">Firebase</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="notification">Notification</option>
+                    <option value="system">System</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Action</label>
+                <select id="filterAction" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#115E59] focus:border-transparent">
+                    <option value="">All Actions</option>
+                    <option value="CREATED">Created</option>
+                    <option value="UPDATED">Updated</option>
+                    <option value="DELETED">Deleted</option>
+                    <option value="BACKUP_CREATED">Backup Created</option>
+                    <option value="BACKUP_RESTORED">Backup Restored</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="loadLogs()" class="w-full px-6 py-2 bg-[#115E59] hover:bg-[#0D4A47] text-white rounded-xl text-sm font-semibold transition-colors">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Configuration Changes</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="border-b border-slate-200">
+                    <tr class="text-left">
+                        <th class="pb-3 font-semibold text-slate-700">Timestamp</th>
+                        <th class="pb-3 font-semibold text-slate-700">Admin User</th>
+                        <th class="pb-3 font-semibold text-slate-700">Integration</th>
+                        <th class="pb-3 font-semibold text-slate-700">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTableBody">
+                    <tr>
+                        <td colspan="4" class="py-8 text-center text-slate-500">Loading logs...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alertBox" class="hidden mt-6"></div>
+</div>
+
+<script>
+async function loadLogs() {
+    try {
+        const integration = document.getElementById('filterIntegration').value;
+        const action = document.getElementById('filterAction').value;
+
+        let url = '/admin/api/config/logs?limit=100';
+        if (integration) url += `&integration=${integration}`;
+        if (action) url += `&action=${action}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.ok) {
+            renderLogs(data.logs);
+        } else {
+            showAlert(data.error || 'Failed to load logs', 'error');
+        }
+    } catch (e) {
+        console.error('Load logs error:', e);
+        showAlert('Network error', 'error');
+    }
+}
+
+function renderLogs(logs) {
+    const tbody = document.getElementById('logsTableBody');
+
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">No logs found</td></tr>';
+        return;
+    }
+
+    const rows = logs.map(log => {
+        const actionBadge = getActionBadge(log.action);
+
+        return `
+            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="py-3 text-slate-600">${log.timestamp}</td>
+                <td class="py-3 text-slate-700 font-semibold">${log.admin_user}</td>
+                <td class="py-3"><span class="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full font-semibold">${log.integration}</span></td>
+                <td class="py-3">${actionBadge}</td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = rows;
+}
+
+function getActionBadge(action) {
+    const badges = {
+        'CREATED': '<span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-semibold">CREATED</span>',
+        'UPDATED': '<span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">UPDATED</span>',
+        'DELETED': '<span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-semibold">DELETED</span>',
+        'BACKUP_CREATED': '<span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-semibold">BACKUP CREATED</span>',
+        'BACKUP_RESTORED': '<span class="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full font-semibold">BACKUP RESTORED</span>'
+    };
+    return badges[action] || `<span class="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-full font-semibold">${action}</span>`;
+}
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+
+    alertBox.className = `border rounded-[16px] p-4 text-sm ${colors[type] || colors.info}`;
+    alertBox.textContent = message;
+    alertBox.classList.remove('hidden');
+
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            alertBox.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+// Load on page load
+loadLogs();
+</script>
+{% endblock %}

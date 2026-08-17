@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}PaymentKita Integration · {{ APP_NAME }}{% endblock %}
+{% block body %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center gap-4 mb-4">
+            <a href="/admin/integration-center" class="text-slate-600 hover:text-[#115E59] transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-[#115E59] tracking-tight">PaymentKita Integration</h1>
+                <p class="text-sm text-slate-600 mt-1">Konfigurasi payment gateway dan QRIS otomatis</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Card -->
+    <div id="statusCard" class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div id="statusIndicator" class="w-3 h-3 rounded-full bg-slate-300"></div>
+                <div>
+                    <div class="text-sm font-semibold text-slate-700">Status</div>
+                    <div id="statusText" class="text-xs text-slate-500">Loading...</div>
+                </div>
+            </div>
+            <button onclick="reloadStatus()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors">
+                Reload
+            </button>
+        </div>
+    </div>
+
+    <!-- Configuration Form -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Configuration</h2>
+
+        <form id="configForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Merchant ID</label>
+                <input type="text" id="merchant" name="merchant" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#115E59] focus:border-transparent" placeholder="Merchant ID dari PaymentKita">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Secret Key</label>
+                <input type="password" id="secret" name="secret" class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#115E59] focus:border-transparent" placeholder="••••••••••••••••">
+                <p class="text-xs text-slate-500 mt-1">Secret key tidak akan ditampilkan setelah disimpan</p>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="px-6 py-2 bg-[#115E59] hover:bg-[#0D4A47] text-white rounded-xl text-sm font-semibold transition-colors">
+                    Save Configuration
+                </button>
+                <button type="button" onclick="testConnection()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors">
+                    Test Connection
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alertBox" class="hidden mb-6"></div>
+</div>
+
+<script>
+let currentConfig = {};
+
+async function loadConfig() {
+    try {
+        const res = await fetch('/admin/api/paymentkita/config');
+        const data = await res.json();
+
+        if (data.ok && data.config) {
+            currentConfig = data.config;
+
+            // Update form
+            if (data.config.merchant) {
+                document.getElementById('merchant').value = data.config.merchant;
+            }
+
+            // Update status
+            updateStatus(data.is_configured, data.last_test);
+        }
+    } catch (e) {
+        console.error('Load config error:', e);
+        showAlert('Error loading configuration', 'error');
+    }
+}
+
+function updateStatus(isConfigured, lastTest) {
+    const indicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+
+    if (!isConfigured) {
+        indicator.className = 'w-3 h-3 rounded-full bg-slate-300';
+        statusText.textContent = 'NOT CONFIGURED';
+    } else if (lastTest && lastTest.success) {
+        indicator.className = 'w-3 h-3 rounded-full bg-green-500';
+        statusText.textContent = 'CONFIGURED';
+    } else {
+        indicator.className = 'w-3 h-3 rounded-full bg-amber-500';
+        statusText.textContent = 'CONFIGURED (Not Tested)';
+    }
+}
+
+function reloadStatus() {
+    loadConfig();
+}
+
+document.getElementById('configForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const merchant = document.getElementById('merchant').value.trim();
+    const secret = document.getElementById('secret').value.trim();
+
+    if (!merchant || !secret) {
+        showAlert('Merchant ID dan Secret Key wajib diisi', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch('/admin/api/paymentkita/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ merchant, secret })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            showAlert('Configuration saved successfully', 'success');
+            // Clear secret field
+            document.getElementById('secret').value = '';
+            loadConfig();
+        } else {
+            showAlert(data.error || 'Failed to save configuration', 'error');
+        }
+    } catch (e) {
+        showAlert('Network error: ' + e.message, 'error');
+    }
+});
+
+async function testConnection() {
+    const merchant = document.getElementById('merchant').value.trim();
+
+    if (!merchant) {
+        showAlert('Please save configuration first', 'error');
+        return;
+    }
+
+    showAlert('Testing connection...', 'info');
+
+    try {
+        const res = await fetch('/admin/api/paymentkita/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            showAlert(data.message || 'Connection test successful', 'success');
+            loadConfig();
+        } else {
+            showAlert(data.error || 'Connection test failed', 'error');
+        }
+    } catch (e) {
+        showAlert('Network error: ' + e.message, 'error');
+    }
+}
+
+function showAlert(message, type) {
+    const alertBox = document.getElementById('alertBox');
+    const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+    };
+
+    alertBox.className = `border rounded-[16px] p-4 text-sm ${colors[type] || colors.info}`;
+    alertBox.textContent = message;
+    alertBox.classList.remove('hidden');
+
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            alertBox.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+// Load on page load
+loadConfig();
+</script>
+{% endblock %}

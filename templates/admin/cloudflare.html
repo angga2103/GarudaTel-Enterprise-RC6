@@ -23,14 +23,40 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div class="p-4 bg-slate-50 rounded-xl">
-                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Connection Status</div>
-                <div id="cf-connection-status" class="text-sm font-bold text-slate-800">-</div>
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Token Saved</div>
+                <div id="cf-token-saved" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Token Format</div>
+                <div id="cf-token-format" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Binary Installed</div>
+                <div id="cf-binary-installed" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Binary Version</div>
+                <div id="cf-binary-version" class="text-sm font-mono text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Service Status</div>
+                <div id="cf-service-status" class="text-sm font-bold text-slate-800">-</div>
             </div>
             <div class="p-4 bg-slate-50 rounded-xl">
                 <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Tunnel Status</div>
                 <div id="cf-tunnel-status" class="text-sm font-bold text-slate-800">-</div>
+            </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Origin Status</div>
+                <div id="cf-origin-status" class="text-sm font-bold text-slate-800">-</div>
             </div>
             <div class="p-4 bg-slate-50 rounded-xl">
                 <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Tunnel Name</div>
@@ -38,7 +64,7 @@
             </div>
             <div class="p-4 bg-slate-50 rounded-xl">
                 <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Last Check</div>
-                <div id="cf-last-check" class="text-sm font-bold text-slate-800">-</div>
+                <div id="cf-last-check" class="text-sm text-slate-800">-</div>
             </div>
         </div>
 
@@ -48,15 +74,15 @@
                 <div id="cf-hostname" class="text-sm font-mono text-slate-800 break-all">-</div>
             </div>
             <div class="p-4 bg-slate-50 rounded-xl">
-                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Service</div>
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Origin Service</div>
                 <div id="cf-service" class="text-sm font-mono text-slate-800">-</div>
             </div>
         </div>
 
         <div id="cf-error-container" class="mt-4 hidden">
-            <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
-                <div class="text-xs text-red-600 font-semibold uppercase tracking-wider mb-1">Last Error</div>
-                <div id="cf-last-error" class="text-sm text-red-700 font-mono"></div>
+            <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div class="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">Status Info</div>
+                <div id="cf-last-error" class="text-sm text-amber-700 font-mono"></div>
             </div>
         </div>
     </div>
@@ -208,13 +234,47 @@ async function loadStatus() {
         const data = await res.json();
 
         if (data.ok) {
-            document.getElementById('cf-connection-status').textContent = data.connection_status || '-';
+            // Token status
+            document.getElementById('cf-token-saved').textContent = data.token_saved ? 'Yes' : 'No';
+            document.getElementById('cf-token-format').textContent = data.token_format || '-';
+
+            // Binary status
+            document.getElementById('cf-binary-installed').textContent = data.binary_installed ? 'Yes' : 'No';
+            document.getElementById('cf-binary-version').textContent = data.binary_version || '-';
+
+            // Service and tunnel status
+            document.getElementById('cf-service-status').textContent = data.service_status || '-';
             document.getElementById('cf-tunnel-status').textContent = data.tunnel_status || '-';
+
+            // Origin status
+            document.getElementById('cf-origin-status').textContent = data.origin_status || '-';
+
+            // Other info
             document.getElementById('cf-tunnel-name').textContent = data.tunnel_name || '-';
             document.getElementById('cf-hostname').textContent = data.hostname || '-';
             document.getElementById('cf-service').textContent = data.service || '-';
             document.getElementById('cf-last-check').textContent = data.last_check || '-';
 
+            // Update badge based on tunnel status
+            const badge = document.getElementById('cloudflare-status-badge');
+            if (data.tunnel_status === 'CONNECTED') {
+                badge.className = 'px-3 py-1 bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Connected';
+            } else if (data.tunnel_status === 'DISCONNECTED') {
+                badge.className = 'px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Disconnected';
+            } else if (data.tunnel_status === 'NOT_INSTALLED') {
+                badge.className = 'px-3 py-1 bg-red-100 text-red-700 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Not Installed';
+            } else if (data.tunnel_status === 'NOT_CONFIGURED') {
+                badge.className = 'px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = 'Not Configured';
+            } else {
+                badge.className = 'px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wider rounded-full';
+                badge.textContent = data.tunnel_status || 'Unknown';
+            }
+
+            // Show/hide error container
             if (data.last_error) {
                 document.getElementById('cf-error-container').classList.remove('hidden');
                 document.getElementById('cf-last-error').textContent = data.last_error;

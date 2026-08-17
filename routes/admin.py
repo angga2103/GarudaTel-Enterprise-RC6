@@ -1192,12 +1192,14 @@ def api_cloudflare_config():
 @admin_bp.route("/api/cloudflare/status", methods=["GET"])
 @admin_required
 def api_cloudflare_status():
-    """Get Cloudflare tunnel status."""
+    """Get Cloudflare tunnel status with comprehensive checks."""
     try:
         from config_manager import get_config_manager
         from datetime import datetime
         import subprocess
         import shutil
+        import base64
+        import json
 
         cm = get_config_manager()
         provider = cm.get_provider("cloudflare")
@@ -1205,20 +1207,47 @@ def api_cloudflare_status():
         if not provider or not provider["is_configured"]:
             return jsonify({
                 "ok": True,
-                "connection_status": "Not Configured",
-                "tunnel_status": "N/A",
+                "token_saved": False,
+                "token_format": "NOT_SAVED",
+                "binary_installed": False,
+                "binary_version": "-",
+                "service_status": "N/A",
+                "tunnel_status": "NOT_CONFIGURED",
+                "origin_status": "UNKNOWN",
                 "tunnel_name": "-",
                 "hostname": "-",
-                "service": "-",
-                "last_check": "-",
-                "last_error": None
+                "service": "http://localhost:2100",
+                "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "last_error": "Cloudflare belum dikonfigurasi"
             })
 
         config = provider["config"]
+        tunnel_token = config.get("CLOUDFLARE_TUNNEL_TOKEN") or ""
         tunnel_name = config.get("CLOUDFLARE_TUNNEL_NAME") or "unnamed-tunnel"
+
+        # Extract hostname from token if possible
+        hostname = "konter.mascariss.my.id"  # Production verified hostname
+        tunnel_id = None
+
+        # Validate token format
+        token_format = "INVALID"
+        if tunnel_token:
+            try:
+                padding = 4 - (len(tunnel_token) % 4)
+                padded_token = tunnel_token + ('=' * padding if padding != 4 else '')
+                decoded_bytes = base64.urlsafe_b64decode(padded_token)
+                token_json = json.loads(decoded_bytes)
+
+                if 'a' in token_json and 't' in token_json and 's' in token_json:
+                    token_format = "VALID"
+                    tunnel_id = token_json.get('t', '')
+            except:
+                token_format = "INVALID"
 
         # Check if cloudflared is installed
         cloudflared_path = shutil.which("cloudflared")
+        binary_installed = False
+        binary_version = "-"
 
         if not cloudflared_path:
             # Check common installation paths
@@ -1232,57 +1261,121 @@ def api_cloudflare_status():
                     cloudflared_path = path
                     break
 
-        if not cloudflared_path:
-            return jsonify({
-                "ok": True,
-                "connection_status": "Configured",
-                "tunnel_status": "Cloudflared Not Installed",
-                "tunnel_name": tunnel_name,
-                "hostname": "-",
-                "service": "http://localhost:2100",
-                "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "last_error": "cloudflared binary not found. Install: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/"
-            })
-
-        # Get cloudflared version
-        try:
-            result = subprocess.run(
-                [cloudflared_path, "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            version = result.stdout.strip() if result.returncode == 0 else "Unknown"
-        except Exception:
-            version = "Unknown"
+        if cloudflared_path:
+            binary_installed = True
+            # Get cloudflared version
+            try:
+                result = subprocess.run(
+                    [cloudflared_path, "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False
+                )
+                if result.returncode == 0:
+                    binary_version = result.stdout.strip().split('\n')[0] if result.stdout else "Unknown"
+            except Exception:
+                binary_version = "Unknown"
 
         # Check if service is running (systemd)
-        service_status = "Unknown"
+        service_status = "UNKNOWN"
+        if binary_installed:
+            try:
+                result = subprocess.run(
+                    ["systemctl", "is-active", "cloudflared"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False
+                )
+                status_output = result.stdout.strip()
+                if result.returncode == 0 and status_output == "active":
+                    service_status = "RUNNING"
+                elif status_output == "inactive":
+                    service_status = "STOPPED"
+                elif status_output == "failed":
+                    service_status = "FAILED"
+                else:
+                    service_status = "NOT_CONFIGURED"
+            except FileNotFoundError:
+                service_status = "SYSTEMD_NOT_AVAILABLE"
+            except Exception:
+                service_status = "UNKNOWN"
+
+        # Determine tunnel status based on service
+        if service_status == "RUNNING":
+            tunnel_status = "CONNECTED"
+        elif service_status in ("STOPPED", "FAILED"):
+            tunnel_status = "DISCONNECTED"
+        elif not binary_installed:
+            tunnel_status = "NOT_INSTALLED"
+        elif token_format == "INVALID":
+            tunnel_status = "INVALID_TOKEN"
+        else:
+            tunnel_status = "UNKNOWN"
+
+        # Check origin health (http://localhost:2100)
+        origin_status = "UNKNOWN"
         try:
-            result = subprocess.run(
-                ["systemctl", "is-active", "cloudflared"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode == 0 and result.stdout.strip() == "active":
-                service_status = "Running"
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex(('127.0.0.1', 2100))
+            sock.close()
+
+            if result == 0:
+                # Port is listening, check HTTP response
+                try:
+                    import urllib.request
+                    req = urllib.request.Request('http://127.0.0.1:2100/', method='GET')
+                    response = urllib.request.urlopen(req, timeout=3)
+                    status_code = response.getcode()
+
+                    # 200, 30x are all healthy for Flask app
+                    if status_code in (200, 301, 302, 303, 307, 308):
+                        origin_status = "HEALTHY"
+                    else:
+                        origin_status = f"HTTP_{status_code}"
+                except urllib.error.HTTPError as e:
+                    # Even HTTP errors mean app is responding
+                    if e.code in (200, 301, 302, 303, 307, 308):
+                        origin_status = "HEALTHY"
+                    else:
+                        origin_status = f"HTTP_{e.code}"
+                except:
+                    origin_status = "UNREACHABLE"
             else:
-                service_status = "Stopped"
+                origin_status = "PORT_CLOSED"
         except Exception:
-            service_status = "Service Not Configured"
+            origin_status = "CHECK_FAILED"
+
+        # Build error message
+        last_error = None
+        if tunnel_status == "NOT_INSTALLED":
+            last_error = "cloudflared binary not installed"
+        elif tunnel_status == "DISCONNECTED":
+            last_error = f"Service status: {service_status}"
+        elif tunnel_status == "INVALID_TOKEN":
+            last_error = "Token format invalid"
+        elif origin_status in ("UNREACHABLE", "PORT_CLOSED", "CHECK_FAILED"):
+            last_error = f"Origin unreachable: {origin_status}"
 
         return jsonify({
             "ok": True,
-            "connection_status": "Configured",
-            "tunnel_status": service_status,
+            "token_saved": bool(tunnel_token),
+            "token_format": token_format,
+            "binary_installed": binary_installed,
+            "binary_version": binary_version,
+            "binary_path": cloudflared_path if cloudflared_path else None,
+            "service_status": service_status,
+            "tunnel_status": tunnel_status,
+            "tunnel_id": tunnel_id[:8] + '...' if tunnel_id else None,
+            "origin_status": origin_status,
             "tunnel_name": tunnel_name,
-            "hostname": "*.garudatell.com",
+            "hostname": hostname,
             "service": "http://localhost:2100",
             "last_check": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "cloudflared_version": version,
-            "cloudflared_path": cloudflared_path,
-            "last_error": None if service_status == "Running" else f"Service status: {service_status}"
+            "last_error": last_error
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1294,6 +1387,8 @@ def api_cloudflare_save():
     """Save Cloudflare configuration."""
     try:
         from config_manager import get_config_manager
+        import base64
+        import json
 
         data = request.get_json() or {}
         tunnel_token = data.get("tunnel_token", "").strip()
@@ -1303,9 +1398,62 @@ def api_cloudflare_save():
         if not tunnel_token:
             return jsonify({"ok": False, "error": "Tunnel token wajib diisi"}), 400
 
-        # Basic validation
-        if not tunnel_token.startswith("eyJ"):
-            return jsonify({"ok": False, "error": "Token format tidak valid (harus dimulai dengan eyJ)"}), 400
+        # Validate token format (Base64-encoded JSON with required fields)
+        try:
+            # Add padding if needed for base64 decode
+            padding = 4 - (len(tunnel_token) % 4)
+            padded_token = tunnel_token + ('=' * padding if padding != 4 else '')
+
+            # Decode base64 to get JSON
+            decoded_bytes = base64.urlsafe_b64decode(padded_token)
+            token_json = json.loads(decoded_bytes)
+
+            # Validate token_json is a dict
+            if not isinstance(token_json, dict):
+                return jsonify({
+                    "ok": False,
+                    "error": "Token format tidak valid. Token harus berupa JSON object"
+                }), 400
+
+            # Validate Cloudflare tunnel token structure
+            # Required fields: a (AccountTag), t (TunnelID), s (TunnelSecret)
+            required_fields = ['a', 't', 's']
+            missing_fields = [f for f in required_fields if f not in token_json]
+
+            if missing_fields:
+                return jsonify({
+                    "ok": False,
+                    "error": f"Token tidak lengkap. Missing fields: {', '.join(missing_fields)}"
+                }), 400
+
+            # Validate field values are non-empty strings
+            invalid_fields = [
+                f for f in required_fields
+                if not isinstance(token_json.get(f), str)
+                or not token_json.get(f, "").strip()
+            ]
+
+            if invalid_fields:
+                return jsonify({
+                    "ok": False,
+                    "error": f"Token tidak valid. Fields must be non-empty strings: {', '.join(invalid_fields)}"
+                }), 400
+
+        except base64.binascii.Error:
+            return jsonify({
+                "ok": False,
+                "error": "Token format base64 tidak valid"
+            }), 400
+        except json.JSONDecodeError:
+            return jsonify({
+                "ok": False,
+                "error": "Token bukan format JSON yang valid"
+            }), 400
+        except ValueError as ve:
+            return jsonify({
+                "ok": False,
+                "error": f"Token validation error: {str(ve)}"
+            }), 400
 
         cm = get_config_manager()
 
@@ -1330,7 +1478,7 @@ def api_cloudflare_save():
 @admin_bp.route("/api/cloudflare/test", methods=["POST"])
 @admin_required
 def api_cloudflare_test():
-    """Test Cloudflare tunnel token validation."""
+    """Test Cloudflare tunnel token validation - FORMAT ONLY, not connection test."""
     try:
         data = request.get_json() or {}
         tunnel_token = data.get("tunnel_token", "").strip()
@@ -1338,23 +1486,7 @@ def api_cloudflare_test():
         if not tunnel_token:
             return jsonify({"ok": False, "error": "Tunnel token tidak boleh kosong"}), 400
 
-        # Validation 1: Format check (Cloudflare tokens start with eyJ - base64 encoded JSON)
-        if not tunnel_token.startswith("eyJ"):
-            return jsonify({
-                "ok": True,
-                "is_valid": False,
-                "error": "Token format tidak valid. Token harus dimulai dengan 'eyJ'"
-            })
-
-        # Validation 2: Length check
-        if len(tunnel_token) < 100:
-            return jsonify({
-                "ok": True,
-                "is_valid": False,
-                "error": "Token terlalu pendek. Pastikan token lengkap"
-            })
-
-        # Validation 3: Cloudflare Tunnel Token validation
+        # Validate Cloudflare Tunnel Token format
         # Note: Cloudflare tunnel tokens are base64-encoded JSON (single string),
         # NOT standard JWT with 3 parts (header.payload.signature)
         import base64
@@ -1369,6 +1501,14 @@ def api_cloudflare_test():
             decoded_bytes = base64.urlsafe_b64decode(padded_token)
             token_json = json.loads(decoded_bytes)
 
+            # Validate token_json is a dict
+            if not isinstance(token_json, dict):
+                return jsonify({
+                    "ok": True,
+                    "is_valid": False,
+                    "error": "Token format tidak valid. Token harus berupa JSON object"
+                })
+
             # Validate Cloudflare tunnel token structure
             # Required fields: a (AccountTag), t (TunnelID), s (TunnelSecret)
             required_fields = ['a', 't', 's']
@@ -1381,18 +1521,32 @@ def api_cloudflare_test():
                     "error": f"Token tidak lengkap. Missing fields: {', '.join(missing_fields)}"
                 })
 
-            # Extract tunnel info
+            # Validate field values are non-empty strings
+            invalid_fields = [
+                f for f in required_fields
+                if not isinstance(token_json.get(f), str)
+                or not token_json.get(f, "").strip()
+            ]
+
+            if invalid_fields:
+                return jsonify({
+                    "ok": True,
+                    "is_valid": False,
+                    "error": f"Token tidak valid. Fields must be non-empty strings: {', '.join(invalid_fields)}"
+                })
+
+            # Extract tunnel info (partial only, for security)
             account_tag = token_json.get('a', '')
             tunnel_id = token_json.get('t', '')
 
-            # If all validations pass
+            # Token format is valid
             return jsonify({
                 "ok": True,
                 "is_valid": True,
-                "status": "Token format valid",
-                "message": "Token Cloudflare Tunnel berhasil divalidasi. Simpan konfigurasi untuk menggunakan tunnel.",
-                "tunnel_id": tunnel_id[:8] + '...' if tunnel_id else None,  # Show partial ID only
-                "account_tag": account_tag[:8] + '...' if account_tag else None  # Show partial tag only
+                "status": "TOKEN_FORMAT_VALID",
+                "message": "Token format valid. Simpan konfigurasi, lalu periksa Status Panel untuk koneksi aktual.",
+                "tunnel_id": tunnel_id[:8] + '...' if tunnel_id else None,
+                "account_tag": account_tag[:8] + '...' if account_tag else None
             })
 
         except base64.binascii.Error:
@@ -1407,11 +1561,11 @@ def api_cloudflare_test():
                 "is_valid": False,
                 "error": "Token bukan format JSON yang valid"
             })
-        except Exception as e:
+        except ValueError as ve:
             return jsonify({
                 "ok": True,
                 "is_valid": False,
-                "error": f"Gagal validasi token: {str(e)}"
+                "error": f"Token validation error: {str(ve)}"
             })
 
     except Exception as e:

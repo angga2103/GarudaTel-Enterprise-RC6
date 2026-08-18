@@ -50,6 +50,47 @@
         </div>
     </div>
 
+    <!-- Product Synchronization -->
+    <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
+        <h2 class="text-lg font-bold text-[#115E59] mb-4">Product Synchronization</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="p-4 bg-slate-50 rounded-xl">
+                <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Total Products</div>
+                <div id="digi-total-products" class="text-2xl font-bold text-slate-800">-</div>
+            </div>
+            <div class="p-4 bg-green-50 rounded-xl">
+                <div class="text-xs text-green-600 font-semibold uppercase tracking-wider mb-1">Active Products</div>
+                <div id="digi-active-products" class="text-2xl font-bold text-green-700">-</div>
+            </div>
+            <div class="p-4 bg-amber-50 rounded-xl">
+                <div class="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">Inactive Products</div>
+                <div id="digi-inactive-products" class="text-2xl font-bold text-amber-700">-</div>
+            </div>
+            <div class="p-4 bg-blue-50 rounded-xl">
+                <div class="text-xs text-blue-600 font-semibold uppercase tracking-wider mb-1">Last Sync</div>
+                <div id="digi-last-sync" class="text-sm font-bold text-blue-700">-</div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            <button onclick="syncProducts()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Sync Products
+            </button>
+
+            <a href="/admin/products" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                Manage Products
+            </a>
+
+            <a href="/admin/pricelist" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                Advanced Price List
+            </a>
+        </div>
+    </div>
+
     <!-- Configuration -->
     <div class="bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm mb-6">
         <h2 class="text-lg font-bold text-[#115E59] mb-4">Configuration</h2>
@@ -172,6 +213,28 @@ async function loadConfiguration() {
         }
     } catch (e) {
         console.error('Failed to load configuration:', e);
+    }
+}
+
+async function loadProductStats() {
+    try {
+        const res = await fetch('/admin/api/digiflazz/products/stats');
+        const data = await res.json();
+
+        if (data.ok) {
+            document.getElementById('digi-total-products').textContent = data.stats.total.toLocaleString('id-ID');
+            document.getElementById('digi-active-products').textContent = data.stats.active.toLocaleString('id-ID');
+            document.getElementById('digi-inactive-products').textContent = data.stats.inactive.toLocaleString('id-ID');
+
+            if (data.stats.last_sync) {
+                const lastSync = new Date(data.stats.last_sync);
+                document.getElementById('digi-last-sync').textContent = lastSync.toLocaleString('id-ID');
+            } else {
+                document.getElementById('digi-last-sync').textContent = 'Never';
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load product stats:', e);
     }
 }
 
@@ -320,8 +383,63 @@ async function testConnection() {
     }
 }
 
+async function syncProducts() {
+    Swal.fire({
+        title: 'Syncing Products...',
+        text: 'Mengambil data produk dari Digiflazz',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const res = await fetch('/admin/api/digiflazz/sync', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
+            credentials: 'same-origin'
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sync Successful',
+                html: `
+                    <div class="text-left space-y-2">
+                        <p><strong>New Products:</strong> ${data.stats.created}</p>
+                        <p><strong>Updated:</strong> ${data.stats.updated}</p>
+                        <p><strong>Skipped:</strong> ${data.stats.skipped}</p>
+                        <p><strong>Total Processed:</strong> ${data.stats.total_processed}</p>
+                        <p class="text-sm text-slate-600 mt-2">${data.message || ''}</p>
+                    </div>
+                `,
+                confirmButtonColor: '#115E59'
+            });
+            // Reload product stats
+            loadProductStats();
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Sync Failed',
+                text: data.error || 'Gagal sync produk dari Digiflazz'
+            });
+        }
+    } catch (e) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to sync products: ' + String(e)
+        });
+    }
+}
+
 function reloadConfiguration() {
     loadConfiguration();
+    loadProductStats();
 
     Swal.fire({
         toast: true,
@@ -336,6 +454,7 @@ function reloadConfiguration() {
 // Load on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadConfiguration();
+    loadProductStats();
 });
 </script>
 {% endblock %}

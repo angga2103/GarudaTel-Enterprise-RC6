@@ -6,11 +6,15 @@ import time
 import json
 import hashlib
 import urllib.request
+import logging
 from functools import wraps
 
 import requests
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, send_file
 from flask_login import login_required, current_user
+
+# Logger for admin routes
+logger = logging.getLogger(__name__)
 
 from models import (
     get_admin_stats,
@@ -1979,7 +1983,7 @@ def api_digiflazz_test():
         result = digiflazz.cek_saldo()
 
         if result and result.get("status") == "Sukses":
-            balance = result.get("deposit", 0)
+            balance = result.get("saldo", 0)
             return jsonify({
                 "ok": True,
                 "is_valid": True,
@@ -1996,6 +2000,194 @@ def api_digiflazz_test():
 
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/digiflazz/sync", methods=["POST"])
+@admin_required
+def api_digiflazz_sync():
+    """Sync all products from Digiflazz to local database."""
+    try:
+        import digiflazz
+        from models import upsert_product
+
+        # Check if configured
+        if not digiflazz._has_credentials():
+            return jsonify({
+                "ok": False,
+                "error": "Digiflazz belum dikonfigurasi. Simpan credentials terlebih dahulu."
+            }), 400
+
+        # Fetch pricelist from Digiflazz (prepaid only for now)
+        cmd = "prepaid"
+        try:
+            items = digiflazz.fetch_pricelist(cmd)
+        except Exception as e:
+            return jsonify({
+                "ok": False,
+                "error": f"Gagal mengambil data dari Digiflazz: {type(e).__name__}"
+            }), 502
+
+        # Validate response
+        if isinstance(items, dict) and "message" in items:
+            return jsonify({
+                "ok": False,
+                "error": f"Digiflazz error: {items.get('message')}"
+            }), 400
+
+        if not isinstance(items, list):
+            return jsonify({
+                "ok": False,
+                "error": "Format data dari Digiflazz tidak valid"
+            }), 400
+
+        # Build SKU map for tracking
+        by_sku = {}
+        for it in items:
+            sku_code = it.get("buyer_sku_code") or it.get("sku")
+            if not sku_code:
+                continue
+
+            b_status = it.get("buyer_product_status", True)
+            s_status = it.get("seller_product_status", True)
+
+            # Determine if product is active
+            is_active = 1
+            if str(b_status).lower() in ("false", "0") or str(s_status).lower() in ("false", "0"):
+                is_active = 0
+
+            by_sku[sku_code] = {
+                "name": it.get("product_name") or it.get("name"),
+                "category": it.get("category"),
+                "brand": it.get("brand"),
+                "type": it.get("type", "prepaid"),
+                "price": int(it.get("price", 0) or 0),
+                "description": (it.get("desc") or it.get("description") or "")[:200],
+                "active": is_active
+            }
+
+        # Get existing products from database
+        conn = get_conn()
+        try:
+            existing_products = conn.execute(
+                "SELECT sku, margin FROM products"
+            ).fetchall()
+            existing_skus = {row["sku"]: row["margin"] for row in existing_products}
+        finally:
+            conn.close()
+
+        # Statistics
+        created = 0
+        updated = 0
+        skipped = 0
+
+        # Process each product
+        for sku, product_data in by_sku.items():
+            try:
+                if sku in existing_skus:
+                    # Update existing product (preserve margin)
+                    margin = existing_skus[sku]
+                    upsert_product(
+                        sku=sku,
+                        name=product_data["name"],
+                        category=product_data["category"],
+                        brand=product_data["brand"],
+                        type_=product_data["type"],
+                        base_price=product_data["price"],
+                        margin=margin,
+                        description=product_data["description"],
+                        is_active=product_data["active"]
+                    )
+                    updated += 1
+                else:
+                    # Create new product (default margin 0)
+                    upsert_product(
+                        sku=sku,
+                        name=product_data["name"],
+                        category=product_data["category"],
+                        brand=product_data["brand"],
+                        type_=product_data["type"],
+                        base_price=product_data["price"],
+                        margin=0,
+                        description=product_data["description"],
+                        is_active=product_data["active"]
+                    )
+                    created += 1
+            except Exception as e:
+                logger.error("Failed to sync Digiflazz product SKU %s: %s", sku, str(e), exc_info=True)
+                skipped += 1
+                continue
+
+        total_processed = created + updated + skipped
+
+        # Save last sync timestamp to settings table (only on successful sync)
+        try:
+            sync_conn = get_conn()
+            try:
+                res = sync_conn.execute("UPDATE settings SET value=datetime('now') WHERE key=?", ("last_digiflazz_sync",))
+                if res.rowcount == 0:
+                    sync_conn.execute("INSERT INTO settings (key, value) VALUES (?, datetime('now'))", ("last_digiflazz_sync",))
+                sync_conn.commit()
+            finally:
+                sync_conn.close()
+        except Exception as e:
+            logger.warning("Failed to update last_digiflazz_sync timestamp: %s", str(e))
+
+        return jsonify({
+            "ok": True,
+            "message": "Product sync successful",
+            "stats": {
+                "total_processed": total_processed,
+                "created": created,
+                "updated": updated,
+                "deactivated": 0,
+                "skipped": skipped
+            }
+        })
+
+    except Exception as e:
+        logger.error("Digiflazz sync failed: %s", str(e), exc_info=True)
+        return jsonify({"ok": False, "error": "Internal sync error. Check server logs."}), 500
+
+
+@admin_bp.route("/api/digiflazz/products/stats", methods=["GET"])
+@admin_required
+def api_digiflazz_products_stats():
+    """Get Digiflazz product statistics."""
+    try:
+        conn = get_conn()
+        try:
+            # Get total products
+            total_row = conn.execute("SELECT COUNT(*) as count FROM products").fetchone()
+            total = total_row["count"] if total_row else 0
+
+            # Get active products
+            active_row = conn.execute("SELECT COUNT(*) as count FROM products WHERE is_active = 1").fetchone()
+            active = active_row["count"] if active_row else 0
+
+            # Get inactive products
+            inactive = total - active
+
+            # Get last sync time from settings table (dedicated Digiflazz sync timestamp)
+            last_sync_row = conn.execute(
+                "SELECT value FROM settings WHERE key = 'last_digiflazz_sync'"
+            ).fetchone()
+            last_sync = last_sync_row["value"] if last_sync_row else None
+
+        finally:
+            conn.close()
+
+        return jsonify({
+            "ok": True,
+            "stats": {
+                "total": total,
+                "active": active,
+                "inactive": inactive,
+                "last_sync": last_sync
+            }
+        })
+    except Exception as e:
+        logger.error("Failed to retrieve Digiflazz product statistics: %s", str(e), exc_info=True)
+        return jsonify({"ok": False, "error": "Internal error. Check server logs."}), 500
 
 
 # ----- PaymentKita Integration -----

@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+{% block title %}Auto-Tier Margin · Admin{% endblock %}
+{% block body %}
+{% include '_navbar_admin.html' %}
+<main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight text-[#115E59]">Auto-Tier Margin</h1>
+      <p class="text-sm text-slate-600 mt-1">Atur rumus keuntungan otomatis berdasarkan rentang harga modal produk</p>
+    </div>
+    <a href="{{ url_for('admin.products') }}" class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-[#165654] text-sm font-medium hover:bg-slate-50 transition">← Kembali</a>
+  </div>
+
+  <!-- Stats Card -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 shadow-soft">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500 grid place-items-center text-white font-bold text-lg">A</div>
+        <div>
+          <p class="text-xs text-emerald-700 font-medium uppercase tracking-wider">Produk Auto-Tier</p>
+          <p id="autoCount" class="text-2xl font-bold text-emerald-900">-</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 shadow-soft">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-500 grid place-items-center text-white font-bold text-lg">M</div>
+        <div>
+          <p class="text-xs text-amber-700 font-medium uppercase tracking-wider">Produk Manual</p>
+          <p id="manualCount" class="text-2xl font-bold text-amber-900">-</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tier Configuration -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft p-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-slate-800">Atur Rumus Tier</h2>
+      <button onclick="addTier()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">+ Tambah Tier</button>
+    </div>
+
+    <div class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-3">
+      <strong>Tips:</strong> Produk dengan margin=0 akan menggunakan rumus ini. Produk manual (margin>0) tidak terpengaruh.
+    </div>
+
+    <div id="tierContainer" class="space-y-3">
+      <!-- Tiers will be loaded here -->
+    </div>
+
+    <div class="flex gap-3 pt-4 border-t border-slate-200">
+      <button onclick="saveTiers()" class="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#115E59] to-[#0D9488] hover:opacity-90 shadow-md text-white text-sm font-semibold transition">
+        💾 Simpan Rumus Tier
+      </button>
+    </div>
+  </div>
+
+  <!-- Apply Section -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-soft p-6 space-y-4">
+    <h2 class="text-lg font-semibold text-slate-800">Eksekusi Massal</h2>
+
+    <div class="text-sm text-slate-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <strong>Perhatian:</strong> Tombol ini akan menghitung ulang harga jual semua produk AUTO (margin=0) berdasarkan rumus tier yang tersimpan. Produk manual tidak akan diubah.
+    </div>
+
+    <button onclick="applyToProducts()" class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:opacity-90 shadow-md text-white text-sm font-semibold transition">
+      ⚡ Terapkan Auto-Tier ke Produk
+    </button>
+  </div>
+</main>
+
+<script>
+let currentConfig = { tiers: [] };
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/admin/api/auto-tier/config');
+    const data = await res.json();
+
+    if (data.ok) {
+      currentConfig = data.config;
+      document.getElementById('autoCount').textContent = data.stats.auto_products;
+      document.getElementById('manualCount').textContent = data.stats.manual_products;
+      renderTiers();
+    } else {
+      notifyError('Gagal memuat konfigurasi: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    notifyError('Gagal memuat konfigurasi: ' + e.message);
+  }
+}
+
+function renderTiers() {
+  const container = document.getElementById('tierContainer');
+  container.innerHTML = '';
+
+  if (currentConfig.tiers.length === 0) {
+    container.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">Belum ada tier. Klik "Tambah Tier" untuk membuat.</p>';
+    return;
+  }
+
+  currentConfig.tiers.forEach((tier, index) => {
+    const tierType = tier.type || 'fixed';
+    const tierDiv = document.createElement('div');
+
+    if (tierType === 'dynamic') {
+      // Dynamic tier - Display as read-only info
+      const maxDisplay = tier.max === null || tier.max === undefined ? '∞' : tier.max.toLocaleString('id-ID');
+      tierDiv.className = 'bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-4';
+      tierDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-blue-800">Level ${index + 1} - DYNAMIC FORMULA</span>
+            <p class="text-[10px] text-blue-600 mt-0.5">Formula otomatis: max(minimum, base_price × persentase)</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-white/50 rounded-lg p-3">
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Range Modal</p>
+            <p class="text-sm font-bold text-slate-800">Rp ${tier.min.toLocaleString('id-ID')} - ${maxDisplay}</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Formula Member</p>
+            <p class="text-sm font-mono text-emerald-700">max(${tier.min_member.toLocaleString('id-ID')}, bp × ${tier.percent_member})</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Formula Reseller</p>
+            <p class="text-sm font-mono text-amber-700">max(${tier.min_reseller.toLocaleString('id-ID')}, bp × ${tier.percent_reseller})</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-blue-600 italic">Tier ini menggunakan rumus dinamis untuk harga tinggi. Tidak dapat diedit via UI.</p>
+          </div>
+        </div>
+      `;
+    } else {
+      // Fixed tier - Editable
+      const maxDisplay = tier.max === null || tier.max === undefined ? '' : tier.max;
+      tierDiv.className = 'bg-slate-50 border border-slate-200 rounded-xl p-4';
+      tierDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600">Level ${index + 1}</span>
+          <button onclick="removeTier(${index})" class="text-xs text-rose-600 hover:text-rose-700 font-semibold">Hapus</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Min Modal (Rp)</label>
+            <input type="number" id="tier_${index}_min" value="${tier.min}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">Max Modal (Rp)</label>
+            <input type="number" id="tier_${index}_max" value="${maxDisplay}" placeholder="Kosongkan untuk unlimited" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">+ Untung Member (Rp)</label>
+            <input type="number" id="tier_${index}_member" value="${tier.margin_member}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase tracking-wider text-slate-600 font-semibold mb-1">+ Untung Reseller (Rp)</label>
+            <input type="number" id="tier_${index}_reseller" value="${tier.margin_reseller}" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#115E59]/10 focus:border-[#115E59]" />
+          </div>
+        </div>
+      `;
+    }
+
+    container.appendChild(tierDiv);
+  });
+}
+
+function addTier() {
+  const lastTier = currentConfig.tiers[currentConfig.tiers.length - 1];
+
+  // Don't allow adding after dynamic tier
+  if (lastTier && lastTier.type === 'dynamic') {
+    notifyError('Tidak dapat menambah tier setelah tier dynamic. Tier dynamic harus menjadi tier terakhir.');
+    return;
+  }
+
+  const newMin = lastTier ? (lastTier.max ? lastTier.max + 1 : 0) : 0;
+  const newMax = lastTier ? (lastTier.max ? lastTier.max + 50000 : 10000) : 10000;
+
+  currentConfig.tiers.push({
+    level: currentConfig.tiers.length + 1,
+    type: 'fixed',
+    min: newMin,
+    max: newMax,
+    margin_member: 1000,
+    margin_reseller: 500
+  });
+
+  renderTiers();
+}
+
+function removeTier(index) {
+  const tier = currentConfig.tiers[index];
+
+  // Don't allow removing dynamic tier
+  if (tier && tier.type === 'dynamic') {
+    notifyError('Tier dynamic tidak dapat dihapus via UI. Ini adalah tier default sistem.');
+    return;
+  }
+
+  if (currentConfig.tiers.length <= 1) {
+    notifyError('Minimal 1 tier harus ada');
+    return;
+  }
+
+  currentConfig.tiers.splice(index, 1);
+  renderTiers();
+}
+
+async function saveTiers() {
+  try {
+    // Collect values from inputs
+    const tiers = [];
+    currentConfig.tiers.forEach((tier, index) => {
+      const tierType = tier.type || 'fixed';
+
+      if (tierType === 'dynamic') {
+        // Keep dynamic tier as-is (not editable via UI)
+        tiers.push(tier);
+      } else {
+        // Collect values from fixed tier inputs
+        const minVal = parseInt(document.getElementById(`tier_${index}_min`).value || 0);
+        const maxValInput = document.getElementById(`tier_${index}_max`).value;
+        const maxVal = maxValInput === '' || maxValInput === null ? null : parseInt(maxValInput);
+        const memberVal = parseInt(document.getElementById(`tier_${index}_member`).value || 0);
+        const resellerVal = parseInt(document.getElementById(`tier_${index}_reseller`).value || 0);
+
+        tiers.push({
+          level: index + 1,
+          type: 'fixed',
+          min: minVal,
+          max: maxVal,
+          margin_member: memberVal,
+          margin_reseller: resellerVal
+        });
+      }
+    });
+
+    // Validate
+    if (tiers.length === 0) {
+      notifyError('Minimal 1 tier diperlukan');
+      return;
+    }
+
+    Swal.fire({
+      title: 'Simpan Rumus Tier?',
+      text: `${tiers.length} tier akan disimpan. Rumus ini akan digunakan untuk produk AUTO.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Simpan',
+      cancelButtonText: 'Batal'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: 'Menyimpan...',
+          didOpen: () => Swal.showLoading(),
+          allowOutsideClick: false,
+          showConfirmButton: false
+        });
+
+        const res = await postJSON('/admin/api/auto-tier/save', { tiers });
+        Swal.close();
+
+        if (res.ok) {
+          notifySuccess(res.body.message || 'Rumus tier berhasil disimpan');
+          await loadConfig();
+        } else {
+          notifyError(res.body.error || 'Gagal menyimpan');
+        }
+      }
+    });
+
+  } catch (e) {
+    Swal.close();
+    notifyError('Gagal menyimpan: ' + e.message);
+  }
+}
+
+async function applyToProducts() {
+  try {
+    const result = await Swal.fire({
+      title: 'Terapkan Auto-Tier?',
+      html: `
+        <p class="text-sm text-slate-600 mb-2">Sistem akan menghitung ulang harga jual semua produk AUTO (margin=0).</p>
+        <p class="text-sm text-rose-600 font-semibold">Produk manual tidak akan diubah.</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Terapkan',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Menerapkan Auto-Tier...',
+      didOpen: () => Swal.showLoading(),
+      allowOutsideClick: false,
+      showConfirmButton: false
+    });
+
+    const res = await postJSON('/admin/api/auto-tier/apply', {});
+    Swal.close();
+
+    if (res.ok) {
+      const stats = res.body.stats;
+      await Swal.fire({
+        icon: 'success',
+        title: 'Auto-Tier Diterapkan',
+        html: `
+          <div class="text-left text-sm space-y-1 bg-slate-50 rounded-lg p-4 mt-3">
+            <p><strong>Total Diperiksa:</strong> ${stats.total_checked}</p>
+            <p class="text-emerald-600"><strong>Berhasil Diperbarui:</strong> ${stats.updated}</p>
+            <p class="text-slate-600"><strong>Dilewati (Manual):</strong> ${stats.skipped_manual}</p>
+            <p class="text-amber-600"><strong>Tidak Ada Tier:</strong> ${stats.no_tier_match}</p>
+            <p class="text-rose-600"><strong>Gagal:</strong> ${stats.failed}</p>
+          </div>
+        `
+      });
+      await loadConfig();
+    } else {
+      notifyError(res.body.error || 'Gagal menerapkan Auto-Tier');
+    }
+
+  } catch (e) {
+    Swal.close();
+    notifyError('Gagal menerapkan Auto-Tier: ' + e.message);
+  }
+}
+
+// Load config on page load
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+});
+</script>
+{% endblock %}

@@ -42,33 +42,33 @@ class User(UserMixin):
         self.nama_staff1 = row["nama_staff1"] if "nama_staff1" in row.keys() else "Staff 1"
         self.nama_staff2 = row["nama_staff2"] if "nama_staff2" in row.keys() else "Staff 2"
         self.active_shift_id = row["active_shift_id"] if "active_shift_id" in row.keys() else 0
-        self.force_pin_change = row["force_pin_change"] if "force_pin_change" in row.keys() else 0 
+        self.force_pin_change = row["force_pin_change"] if "force_pin_change" in row.keys() else 0
 
     def check_password(self, password: str) -> bool:
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, password)
-    
+
     def check_pin(self, pin_input: str, auto_migrate: bool = True) -> bool:
         """
         Verify PIN with backward compatibility for plaintext PINs.
-        
+
         Args:
             pin_input: PIN to verify
             auto_migrate: Auto-upgrade plaintext to bcrypt on success
-        
+
         Returns:
             True if PIN matches, False otherwise
         """
         if not self.pin:
             return False
-        
+
         pin_input_clean = str(pin_input).strip()
         pin_stored = str(self.pin).strip()
-        
+
         # Check if stored PIN is bcrypt hash (starts with $2a$, $2b$, or $2y$)
         is_bcrypt = pin_stored.startswith('$2')
-        
+
         if is_bcrypt:
             # Verify bcrypt hash
             try:
@@ -459,11 +459,11 @@ def create_user(username: str, password: Optional[str], email: Optional[str] = N
     import secrets
     conn = get_conn()
     pw_hash = generate_password_hash(password) if password else None
-    
+
     # Generate random 6-digit PIN and hash it with bcrypt
     random_pin = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
     pin_hash = bcrypt.hashpw(random_pin.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+
     cur = conn.execute(
         "INSERT INTO users (username, password_hash, email, google_id, role, balance, pin, force_pin_change) VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
         (username, pw_hash, email, google_id, role, balance, pin_hash),
@@ -481,34 +481,34 @@ def update_user_balance(uid: int, delta: int) -> int:
     conn.isolation_level = None  # autocommit-control via BEGIN
     try:
         conn.execute("BEGIN IMMEDIATE")
-        
+
         # Get current balance first
         user = conn.execute("SELECT balance FROM users WHERE id = ?", (uid,)).fetchone()
         if not user:
             conn.execute("ROLLBACK")
             return -1
-        
+
         balance_before = user["balance"]
         balance_after = balance_before + delta
-        
+
         # Check if result would be negative
         if balance_after < 0:
             conn.execute("ROLLBACK")
             return -1
-        
+
         # Update balance
         conn.execute("UPDATE users SET balance = ? WHERE id = ?", (balance_after, uid))
-        
+
         # Log mutation
         mutation_type = "in" if delta > 0 else "out"
         mutation_amount = abs(delta)
         description = "Penyesuaian Saldo oleh Admin" if delta > 0 else "Pengurangan Saldo oleh Admin"
-        
+
         conn.execute(
             "INSERT INTO mutations (uid, type, amount, balance_before, balance_after, description) VALUES (?,?,?,?,?,?)",
             (uid, mutation_type, mutation_amount, balance_before, balance_after, description)
         )
-        
+
         conn.execute("COMMIT")
         return balance_after
     except Exception:
@@ -569,31 +569,31 @@ def set_user_balance(uid: int, balance: int) -> None:
     conn.isolation_level = None
     try:
         conn.execute("BEGIN IMMEDIATE")
-        
+
         # Get current balance
         user = conn.execute("SELECT balance FROM users WHERE id = ?", (uid,)).fetchone()
         if not user:
             conn.execute("ROLLBACK")
             return
-        
+
         balance_before = user["balance"]
         balance_after = balance
         delta = balance_after - balance_before
-        
+
         # Update balance
         conn.execute("UPDATE users SET balance = ? WHERE id = ?", (balance, uid))
-        
+
         # Log mutation if there's a change
         if delta != 0:
             mutation_type = "in" if delta > 0 else "out"
             mutation_amount = abs(delta)
             description = "Set Balance Manual (DEPRECATED)"
-            
+
             conn.execute(
                 "INSERT INTO mutations (uid, type, amount, balance_before, balance_after, description) VALUES (?,?,?,?,?,?)",
                 (uid, mutation_type, mutation_amount, balance_before, balance_after, description)
             )
-        
+
         conn.execute("COMMIT")
     except Exception:
         conn.execute("ROLLBACK")
@@ -646,9 +646,18 @@ def list_products(category: str = None, brand: str = None, active_only: bool = F
     rows = conn.execute(q, params).fetchall()
     conn.close()
     res = []
-    # TAMPILKAN HARGA MURNI DARI DATABASE (TIDAK ADA REKALKULASI)
+    # Calculate prices using hitung_harga_final for consistency
     for r in rows:
-        res.append(dict(r))
+        d = dict(r)
+        bp = d.get('base_price', 0)
+        mg = d.get('margin', 0)
+
+        # Add calculated prices to dict
+        d['price_member'] = hitung_harga_final(bp, mg, 'reguler')
+        d['price_reseller'] = hitung_harga_final(bp, mg, 'reseller')
+        d['is_auto_tier'] = (mg == 0)
+
+        res.append(d)
     return res
 
 
@@ -845,23 +854,23 @@ def mark_topup_paid(order_id: str) -> Optional[dict]:
         if not row:
             conn.execute("ROLLBACK")
             return None
-        
+
         d = dict(row)
         uid = d["uid"]
         amount = d["amount"]
-        
+
         # 1. Update Topup Status
         conn.execute("UPDATE topups SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE id = ?", (d["id"],))
-        
+
         # 2. Update Saldo User
         user = conn.execute('SELECT balance FROM users WHERE id = ?', (uid,)).fetchone()
         before = user['balance'] if user else 0
         after = before + amount
         conn.execute('UPDATE users SET balance = ? WHERE id = ?', (after, uid))
-        
+
         # 3. Catat Mutasi
         conn.execute('INSERT INTO mutations (uid, type, amount, balance_before, balance_after, description) VALUES (?,?,?,?,?,?)', (uid, 'in', amount, before, after, f'Topup {order_id}'))
-        
+
         conn.execute("COMMIT")
         return d
     except Exception as e:
@@ -1030,31 +1039,118 @@ def record_mutation(uid, type_, amount, before, after, desc):
     conn.close()
 
 
+def get_auto_tier_config():
+    """Get Auto-Tier configuration from settings table. Returns default if not found."""
+    # Default configuration (IDENTICAL to old hardcoded logic)
+    # Tiers 1-4: Fixed margins
+    # Tier 5: Dynamic formula matching old behavior: max(min_value, base_price * percent)
+    default_config = {
+        "tiers": [
+            {"level": 1, "min": 0, "max": 10000, "type": "fixed", "margin_member": 1500, "margin_reseller": 500},
+            {"level": 2, "min": 10001, "max": 25000, "type": "fixed", "margin_member": 2000, "margin_reseller": 800},
+            {"level": 3, "min": 25001, "max": 50000, "type": "fixed", "margin_member": 2500, "margin_reseller": 1200},
+            {"level": 4, "min": 50001, "max": 100000, "type": "fixed", "margin_member": 3000, "margin_reseller": 1500},
+            {
+                "level": 5,
+                "min": 100001,
+                "max": None,  # Unlimited upper bound
+                "type": "dynamic",
+                "min_member": 4000,
+                "percent_member": 0.008,
+                "min_reseller": 2000,
+                "percent_reseller": 0.005
+            }
+        ]
+    }
+
+    try:
+        conn = get_conn()
+        row = conn.execute("SELECT value FROM settings WHERE key='auto_tier_config'").fetchone()
+        conn.close()
+
+        if row and row["value"]:
+            import json
+            config = json.loads(row["value"])
+            # Validate structure
+            if "tiers" in config and isinstance(config["tiers"], list) and len(config["tiers"]) > 0:
+                return config
+    except Exception:
+        pass
+
+    return default_config
+
+
 def hitung_harga_final(bp, mg, role):
     # bp = base_price, mg = margin, role = reseller/reguler
     bp = int(bp or 0)
     mg = int(mg or 0)
     role_str = str(role).lower()
-    
+
     # 1. JIKA ADMIN ISI MARGIN MANUAL (TIDAK 0)
     if mg > 0:
         # Reseller dapat diskon 30% dari margin manual Bos
         return int(bp + (mg * 0.7)) if role_str == 'reseller' else int(bp + mg)
-        
+
     # 2. JIKA MARGIN MANUAL 0 (LOGIKA AUTO TIERING BERJENJANG)
-    if bp <= 10000:
-        m_mem, m_res = 1500, 500
-    elif bp <= 25000:
-        m_mem, m_res = 2000, 800
-    elif bp <= 50000:
-        m_mem, m_res = 2500, 1200
-    elif bp <= 100000:
-        m_mem, m_res = 3000, 1500
-    else:
-        # Harga tinggi menggunakan batas minimum persentase (Anti-Rugi)
-        m_mem = max(4000, int(bp * 0.008))
-        m_res = max(2000, int(bp * 0.005))
-        
+    # Load tier configuration from database
+    config = get_auto_tier_config()
+    tiers = config.get("tiers", [])
+
+    # Find matching tier
+    m_mem = 0
+    m_res = 0
+
+    for tier in tiers:
+        tier_min = int(tier.get("min", 0))
+        tier_max = tier.get("max")
+
+        # Check if base_price falls within this tier
+        in_range = False
+        if tier_max is None:
+            # Unlimited upper bound (last tier)
+            in_range = (bp >= tier_min)
+        else:
+            tier_max = int(tier_max)
+            in_range = (tier_min <= bp <= tier_max)
+
+        if in_range:
+            tier_type = tier.get("type", "fixed")
+
+            if tier_type == "fixed":
+                # Fixed margin
+                m_mem = int(tier.get("margin_member", 0))
+                m_res = int(tier.get("margin_reseller", 0))
+            elif tier_type == "dynamic":
+                # Dynamic formula: max(min_value, base_price * percent)
+                min_mem = int(tier.get("min_member", 0))
+                percent_mem = float(tier.get("percent_member", 0))
+                min_res = int(tier.get("min_reseller", 0))
+                percent_res = float(tier.get("percent_reseller", 0))
+
+                m_mem = max(min_mem, int(bp * percent_mem))
+                m_res = max(min_res, int(bp * percent_res))
+
+            break
+
+    # Fallback jika tidak ada tier yang cocok (safety)
+    if m_mem == 0 and m_res == 0:
+        # Use highest tier as fallback
+        if len(tiers) > 0:
+            last_tier = tiers[-1]
+            tier_type = last_tier.get("type", "fixed")
+
+            if tier_type == "fixed":
+                m_mem = int(last_tier.get("margin_member", 0))
+                m_res = int(last_tier.get("margin_reseller", 0))
+            elif tier_type == "dynamic":
+                min_mem = int(last_tier.get("min_member", 0))
+                percent_mem = float(last_tier.get("percent_member", 0))
+                min_res = int(last_tier.get("min_reseller", 0))
+                percent_res = float(last_tier.get("percent_reseller", 0))
+
+                m_mem = max(min_mem, int(bp * percent_mem))
+                m_res = max(min_res, int(bp * percent_res))
+
     return int(bp + (m_res if role_str == 'reseller' else m_mem))
 
 
@@ -1066,10 +1162,10 @@ def save_inquiry_session(ref_id: str, uid: int, sku: str, target: str, amount: i
     try:
         # Cleanup expired inquiries for this user before insert
         conn.execute("DELETE FROM inquiry_sessions WHERE uid=? AND expires_at < datetime('now')", (uid,))
-        
+
         # Set expiry 5 minutes from now
         expires_at = (datetime.now() + timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
-        
+
         conn.execute("""
             INSERT INTO inquiry_sessions (ref_id, uid, sku, target, amount, customer_name, desc, status, expires_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)
@@ -1085,24 +1181,24 @@ def get_and_lock_inquiry(ref_id: str, uid: int, order_id: str) -> Optional[dict]
     conn.isolation_level = None
     try:
         conn.execute("BEGIN IMMEDIATE")
-        
+
         # Get inquiry
         inquiry = conn.execute("""
-            SELECT * FROM inquiry_sessions 
+            SELECT * FROM inquiry_sessions
             WHERE ref_id=? AND uid=? AND status='active' AND expires_at > datetime('now')
         """, (ref_id, uid)).fetchone()
-        
+
         if not inquiry:
             conn.execute("ROLLBACK")
             return None
-        
+
         # Lock inquiry (mark as processing)
         conn.execute("""
-            UPDATE inquiry_sessions 
+            UPDATE inquiry_sessions
             SET status='processing', order_id=?
             WHERE ref_id=?
         """, (order_id, ref_id))
-        
+
         conn.execute("COMMIT")
         return dict(inquiry)
     except Exception:

@@ -5,7 +5,7 @@
 <main class="max-w-7xl mx-auto px-4 py-6 space-y-4">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-2xl font-semibold tracking-tight text-[#115E59] shrink-0">Manajemen Produk</h1>
-    
+
     <div class="flex items-center gap-2 flex-1 min-w-[200px] max-w-xl mr-auto ml-2 lg:ml-6">
       <div class="relative flex-1">
         <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -52,38 +52,14 @@
             <td class="px-3 py-2.5">{{ p.brand }}</td>
             <td class="px-3 py-2.5 text-right">Rp {{ '{:,.0f}'.format(p.base_price).replace(',', '.') }}</td>
             <td class="px-3 py-2.5 text-right text-emerald-600 font-medium">+{{ '{:,.0f}'.format(p.margin).replace(',', '.') }}</td>
-            
-            {% set bp = p.base_price %}
-            {% set m = p.margin %}
-            {% if m > 0 %}
-                {% set h_member = bp + m %}
-                {% set h_reseller = (bp + (m * 0.7)) | int %}
-                {% set badge = '<br><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-black shadow-sm border border-amber-200">Manual</span>' %}
-            {% else %}
-                {% if bp <= 10000 %}
-                    {% set m_mem = 1500 %}
-                    {% set m_res = 500 %}
-                {% elif bp <= 25000 %}
-                    {% set m_mem = 2000 %}
-                    {% set m_res = 800 %}
-                {% elif bp <= 50000 %}
-                    {% set m_mem = 2500 %}
-                    {% set m_res = 1200 %}
-                {% elif bp <= 100000 %}
-                    {% set m_mem = 3000 %}
-                    {% set m_res = 1500 %}
-                {% else %}
-                    {% set calc_mem = bp * 0.008 %}
-                    {% set m_mem = 4000 if calc_mem < 4000 else calc_mem %}
-                    {% set calc_res = bp * 0.005 %}
-                    {% set m_res = 2000 if calc_res < 2000 else calc_res %}
-                {% endif %}
-                {% set h_member = (bp + m_mem) | int %}
-                {% set h_reseller = (bp + m_res) | int %}
+
+            {% if p.is_auto_tier %}
                 {% set badge = '<br><span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-black shadow-sm border border-emerald-200">Auto Tier</span>' %}
+            {% else %}
+                {% set badge = '<br><span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded text-[8px] uppercase tracking-widest font-black shadow-sm border border-amber-200">Manual</span>' %}
             {% endif %}
-            <td class="px-3 py-2.5 text-right font-bold text-[#115E59] leading-tight">Rp {{ '{:,.0f}'.format(h_member).replace(',', '.') }} {{ badge|safe }}</td>
-            <td class="px-3 py-2.5 text-right font-bold text-amber-600 leading-tight">Rp {{ '{:,.0f}'.format(h_reseller).replace(',', '.') }} {{ badge|safe }}</td>
+            <td class="px-3 py-2.5 text-right font-bold text-[#115E59] leading-tight">Rp {{ '{:,.0f}'.format(p.price_member).replace(',', '.') }} {{ badge|safe }}</td>
+            <td class="px-3 py-2.5 text-right font-bold text-amber-600 leading-tight">Rp {{ '{:,.0f}'.format(p.price_reseller).replace(',', '.') }} {{ badge|safe }}</td>
 
             <td class="px-3 py-2.5 text-center"><span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full {{ 'bg-emerald-50 text-emerald-700' if p.is_active else 'bg-slate-50/50 text-slate-600' }}">{{ 'aktif' if p.is_active else 'nonaktif' }}</span></td>
             <td class="px-3 py-2.5 text-center whitespace-nowrap">

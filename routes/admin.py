@@ -2766,3 +2766,263 @@ def _log_config_change(integration, action):
         conn.close()
     except:
         pass  # Silent fail - logging is not critical
+
+
+# ==================== AUTO-TIER MARGIN MANAGEMENT ====================
+
+@admin_bp.route("/auto-tier")
+@admin_required
+def auto_tier():
+    """Auto-Tier Margin configuration page."""
+    return render_template("admin/auto_tier.html")
+
+
+@admin_bp.route("/api/auto-tier/config", methods=["GET"])
+@admin_required
+def api_auto_tier_config():
+    """Get current Auto-Tier configuration."""
+    try:
+        from models import get_auto_tier_config
+        config = get_auto_tier_config()
+
+        # Count AUTO products (margin=0)
+        conn = get_conn()
+        auto_count = conn.execute("SELECT COUNT(*) as cnt FROM products WHERE margin=0").fetchone()["cnt"]
+        manual_count = conn.execute("SELECT COUNT(*) as cnt FROM products WHERE margin>0").fetchone()["cnt"]
+        conn.close()
+
+        return jsonify({
+            "ok": True,
+            "config": config,
+            "stats": {
+                "auto_products": auto_count,
+                "manual_products": manual_count
+            }
+        })
+    except Exception as e:
+        logger.error("Failed to get auto-tier config: %s", str(e), exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/auto-tier/save", methods=["POST"])
+@admin_required
+def api_auto_tier_save():
+    """Save Auto-Tier configuration with validation."""
+    try:
+        data = request.get_json() or {}
+        tiers = data.get("tiers", [])
+
+        if not isinstance(tiers, list) or len(tiers) == 0:
+            return jsonify({"ok": False, "error": "Minimal 1 tier diperlukan"}), 400
+
+        # Validate each tier
+        for i, tier in enumerate(tiers):
+            tier_type = tier.get("type", "fixed")
+            level = tier.get("level")
+            tier_min = tier.get("min")
+            tier_max = tier.get("max")
+
+            # Type validation for common fields
+            try:
+                tier["level"] = int(level)
+                tier["min"] = int(tier_min)
+
+                # Max can be None/null for unlimited
+                if tier_max is not None and tier_max != '':
+                    tier["max"] = int(tier_max)
+                else:
+                    tier["max"] = None
+
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "error": f"Tier {i+1}: Level dan Min harus berupa angka"}), 400
+
+            # Validate based on tier type
+            if tier_type == "fixed":
+                margin_member = tier.get("margin_member")
+                margin_reseller = tier.get("margin_reseller")
+
+                try:
+                    tier["margin_member"] = int(margin_member)
+                    tier["margin_reseller"] = int(margin_reseller)
+                except (TypeError, ValueError):
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Margin harus berupa angka"}), 400
+
+                # Value validation
+                if tier["margin_member"] < 0:
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Margin Member tidak boleh negatif"}), 400
+                if tier["margin_reseller"] < 0:
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Margin Reseller tidak boleh negatif"}), 400
+
+            elif tier_type == "dynamic":
+                # Validate dynamic tier parameters
+                min_member = tier.get("min_member")
+                percent_member = tier.get("percent_member")
+                min_reseller = tier.get("min_reseller")
+                percent_reseller = tier.get("percent_reseller")
+
+                try:
+                    tier["min_member"] = int(min_member)
+                    tier["min_reseller"] = int(min_reseller)
+                    tier["percent_member"] = float(percent_member)
+                    tier["percent_reseller"] = float(percent_reseller)
+                except (TypeError, ValueError):
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Parameter dynamic tier harus berupa angka"}), 400
+
+                # Value validation
+                if tier["min_member"] < 0:
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Min Member tidak boleh negatif"}), 400
+                if tier["min_reseller"] < 0:
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Min Reseller tidak boleh negatif"}), 400
+                if tier["percent_member"] < 0 or tier["percent_member"] > 1:
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Percent Member harus antara 0 dan 1"}), 400
+                if tier["percent_reseller"] < 0 or tier["percent_reseller"] > 1:
+                    return jsonify({"ok": False, "error": f"Tier {i+1}: Percent Reseller harus antara 0 dan 1"}), 400
+
+            # Common validation
+            if tier["min"] < 0:
+                return jsonify({"ok": False, "error": f"Tier {i+1}: Min tidak boleh negatif"}), 400
+            if tier["max"] is not None and tier["max"] < tier["min"]:
+                return jsonify({"ok": False, "error": f"Tier {i+1}: Max harus >= Min"}), 400
+
+        # Sort by min price
+        tiers_sorted = sorted(tiers, key=lambda t: t["min"])
+
+        # Check for gaps and overlaps (only for non-unlimited tiers)
+        for i in range(len(tiers_sorted) - 1):
+            current_max = tiers_sorted[i]["max"]
+            next_min = tiers_sorted[i+1]["min"]
+
+            # Skip overlap check if current tier is unlimited
+            if current_max is None:
+                continue
+
+            if next_min <= current_max:
+                return jsonify({
+                    "ok": False,
+                    "error": f"Tier overlap detected: Tier {i+1} max ({current_max}) >= Tier {i+2} min ({next_min})"
+                }), 400
+
+        # Re-number levels sequentially
+        for i, tier in enumerate(tiers_sorted):
+            tier["level"] = i + 1
+        for i in range(len(tiers_sorted) - 1):
+            current_max = tiers_sorted[i]["max"]
+            next_min = tiers_sorted[i+1]["min"]
+
+            if next_min <= current_max:
+                return jsonify({
+                    "ok": False,
+                    "error": f"Tier overlap detected: Tier {i+1} max ({current_max}) >= Tier {i+2} min ({next_min})"
+                }), 400
+
+        # Re-number levels sequentially
+        for i, tier in enumerate(tiers_sorted):
+            tier["level"] = i + 1
+
+        # Save to settings table
+        config = {"tiers": tiers_sorted}
+        conn = get_conn()
+        try:
+            existing = conn.execute("SELECT id FROM settings WHERE key='auto_tier_config'").fetchone()
+            if existing:
+                conn.execute("UPDATE settings SET value=? WHERE key='auto_tier_config'", (json.dumps(config),))
+            else:
+                conn.execute("INSERT INTO settings (key, value) VALUES ('auto_tier_config', ?)", (json.dumps(config),))
+            conn.commit()
+        finally:
+            conn.close()
+
+        logger.info("Auto-Tier config saved by %s: %d tiers", current_user.username, len(tiers_sorted))
+
+        return jsonify({"ok": True, "message": f"Rumus {len(tiers_sorted)} tier berhasil disimpan"})
+
+    except Exception as e:
+        logger.error("Failed to save auto-tier config: %s", str(e), exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@admin_bp.route("/api/auto-tier/apply", methods=["POST"])
+@admin_required
+def api_auto_tier_apply():
+    """Apply Auto-Tier calculation to all AUTO products (margin=0)."""
+    try:
+        from models import get_auto_tier_config, hitung_harga_final
+
+        # Get current tier config
+        config = get_auto_tier_config()
+        tiers = config.get("tiers", [])
+
+        if len(tiers) == 0:
+            return jsonify({"ok": False, "error": "Tidak ada konfigurasi tier"}), 400
+
+        conn = get_conn()
+
+        # Get all AUTO products (margin=0)
+        auto_products = conn.execute("""
+            SELECT id, sku, base_price, margin
+            FROM products
+            WHERE margin = 0
+        """).fetchall()
+
+        total_checked = len(auto_products)
+        updated = 0
+        skipped = 0
+        no_tier = 0
+        failed = 0
+
+        for product in auto_products:
+            try:
+                prod_id = product["id"]
+                base_price = int(product["base_price"] or 0)
+
+                # Find matching tier
+                found_tier = False
+                for tier in tiers:
+                    tier_min = int(tier.get("min", 0))
+                    tier_max = int(tier.get("max", 0))
+
+                    if tier_min <= base_price <= tier_max:
+                        found_tier = True
+                        # IMPORTANT: Keep margin=0 to maintain AUTO indicator
+                        # Only update the 'price' field (sell price for reguler)
+                        margin_member = int(tier.get("margin_member", 0))
+                        new_price = base_price + margin_member
+
+                        conn.execute("""
+                            UPDATE products
+                            SET price = ?,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ?
+                        """, (new_price, prod_id))
+
+                        updated += 1
+                        break
+
+                if not found_tier:
+                    no_tier += 1
+
+            except Exception as e:
+                logger.warning("Failed to apply tier to product ID %s: %s", prod_id, str(e))
+                failed += 1
+                continue
+
+        conn.commit()
+        conn.close()
+
+        logger.info("Auto-Tier applied by %s: %d updated, %d skipped, %d no tier, %d failed",
+                    current_user.username, updated, skipped, no_tier, failed)
+
+        return jsonify({
+            "ok": True,
+            "stats": {
+                "total_checked": total_checked,
+                "updated": updated,
+                "skipped_manual": skipped,
+                "no_tier_match": no_tier,
+                "failed": failed
+            }
+        })
+
+    except Exception as e:
+        logger.error("Failed to apply auto-tier: %s", str(e), exc_info=True)
+        return jsonify({"ok": False, "error": str(e)}), 500

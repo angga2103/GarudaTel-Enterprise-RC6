@@ -324,7 +324,7 @@ def pricelist_fetch():
         if is_match:
             filtered.append(it)
             try:
-                upsert_pricelist_item(it)  # cache the subset for next visit
+                upsert_pricelist_item(it, source_command=cmd)  # cache the subset for next visit
             except Exception:
                 pass
 
@@ -368,6 +368,7 @@ def pricelist_import():
             sku=r["sku"], name=r["name"], category=r["category"], brand=r["brand"],
             type_=r["type"] or "prepaid", base_price=int(r["price"]),
             margin=margin, description=r["description"] or "", is_active=1,
+            source_command=r.get("source_command"),
         )
         imported += 1
     return jsonify({"ok": True, "imported": imported})
@@ -2095,7 +2096,8 @@ def api_digiflazz_sync():
                         base_price=product_data["price"],
                         margin=margin,
                         description=product_data["description"],
-                        is_active=product_data["active"]
+                        is_active=product_data["active"],
+                        source_command=cmd
                     )
                     updated += 1
                 else:
@@ -2109,7 +2111,8 @@ def api_digiflazz_sync():
                         base_price=product_data["price"],
                         margin=0,
                         description=product_data["description"],
-                        is_active=product_data["active"]
+                        is_active=product_data["active"],
+                        source_command=cmd
                     )
                     created += 1
             except Exception as e:

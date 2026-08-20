@@ -683,21 +683,21 @@ def get_product_by_id(pid: int) -> Optional[dict]:
 
 def upsert_product(sku: str, name: str, category: str, brand: str, type_: str,
                    base_price: int, margin: int, description: str = "",
-                   is_active: int = 1) -> None:
+                   is_active: int = 1, source_command: str = None) -> None:
     conn = get_conn()
     price = base_price + margin
     existing = conn.execute("SELECT id FROM products WHERE sku = ?", (sku,)).fetchone()
     if existing:
         conn.execute(
             """UPDATE products SET name=?, category=?, brand=?, type=?, base_price=?, margin=?, price=?,
-               description=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE sku=?""",
-            (name, category, brand, type_, base_price, margin, price, description, is_active, sku),
+               description=?, is_active=?, source_command=?, updated_at=CURRENT_TIMESTAMP WHERE sku=?""",
+            (name, category, brand, type_, base_price, margin, price, description, is_active, source_command, sku),
         )
     else:
         conn.execute(
             """INSERT INTO products (sku, name, category, brand, type, base_price, margin, price,
-               description, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (sku, name, category, brand, type_, base_price, margin, price, description, is_active),
+               description, is_active, source_command) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (sku, name, category, brand, type_, base_price, margin, price, description, is_active, source_command),
         )
     conn.commit()
     conn.close()
@@ -881,16 +881,17 @@ def mark_topup_paid(order_id: str) -> Optional[dict]:
 
 
 # ----- Pricelist Cache -----
-def upsert_pricelist_item(item: dict) -> None:
+def upsert_pricelist_item(item: dict, source_command: str = None) -> None:
     conn = get_conn()
     conn.execute(
         """INSERT INTO pricelist_cache (sku, name, category, brand, type, seller_name, price,
            buyer_sku_code, buyer_product_status, seller_product_status, unlimited_stock,
-           stock, multi, start_cut_off, end_cut_off, description, cached_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+           stock, multi, start_cut_off, end_cut_off, description, source_command, cached_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
            ON CONFLICT(sku) DO UPDATE SET
              name=excluded.name, category=excluded.category, brand=excluded.brand,
-             type=excluded.type, price=excluded.price, cached_at=CURRENT_TIMESTAMP""",
+             type=excluded.type, price=excluded.price, source_command=excluded.source_command,
+             cached_at=CURRENT_TIMESTAMP""",
         (
             item.get("buyer_sku_code") or item["sku"],
             item.get("product_name") or item["name"],
@@ -904,6 +905,7 @@ def upsert_pricelist_item(item: dict) -> None:
             int(item.get("multi", 0)),
             item.get("start_cut_off", ""), item.get("end_cut_off", ""),
             item.get("desc", ""),
+            source_command,
         ),
     )
     conn.commit()

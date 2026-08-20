@@ -2018,8 +2018,16 @@ def api_digiflazz_sync():
                 "error": "Digiflazz belum dikonfigurasi. Simpan credentials terlebih dahulu."
             }), 400
 
-        # Fetch pricelist from Digiflazz (prepaid only for now)
-        cmd = "prepaid"
+        # Get cmd parameter from request (prepaid or pasca)
+        data = request.get_json() or {}
+        cmd = (data.get("cmd") or "prepaid").strip().lower()
+        
+        # Validate cmd parameter
+        if cmd not in ["prepaid", "pasca"]:
+            return jsonify({
+                "ok": False,
+                "error": f"cmd parameter invalid. Must be 'prepaid' or 'pasca', got '{cmd}'"
+            }), 400
         try:
             items = digiflazz.fetch_pricelist(cmd)
         except Exception as e:

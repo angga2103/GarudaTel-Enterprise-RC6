@@ -681,6 +681,37 @@ def get_product_by_id(pid: int) -> Optional[dict]:
     return d
 
 
+def get_product_classification(product: dict) -> str:
+    """Return "prepaid" or "postpaid" based on classification hierarchy.
+    
+    Hierarchy:
+    1. source_command == "pasca" -> POSTPAID
+    2. source_command == "prepaid" -> PREPAID
+    3. type == "postpaid" -> POSTPAID (legacy fallback)
+    4. DEFAULT -> PREPAID (safe default)
+    
+    Note: Client-provided is_postpaid flag is NOT used in classification.
+    """
+    source_cmd = product.get("source_command")
+    
+    if source_cmd == "pasca":
+        return "postpaid"
+    elif source_cmd == "prepaid":
+        return "prepaid"
+    
+    # Legacy fallback for products with unknown source_command
+    if product.get("type") == "postpaid":
+        # Log warning for debugging - product using legacy type classification
+        import logging
+        logging.getLogger(__name__).warning(
+            f"Product {product.get('sku', 'unknown')} using legacy type field for classification"
+        )
+        return "postpaid"
+    
+    # Safe default for unknown/legacy products
+    return "prepaid"
+
+
 def upsert_product(sku: str, name: str, category: str, brand: str, type_: str,
                    base_price: int, margin: int, description: str = "",
                    is_active: int = 1, source_command: str = None) -> None:

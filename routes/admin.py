@@ -332,7 +332,7 @@ def pricelist_fetch():
         "sku": it.get("buyer_sku_code") or it.get("sku"),
         "name": it.get("product_name") or it.get("name"),
         "category": it.get("category"), "brand": it.get("brand"),
-        "type": "postpaid" if cmd == "pasca" else it.get("type", "prepaid"),
+        "type": it.get("type", "prepaid"),
         "price": int(it.get("price", 0)),
         "stock_status": "Tersedia" if int(it.get("buyer_product_status", 1)) else "Habis",
         "description": (it.get("description") or "")[:200],
@@ -364,11 +364,16 @@ def pricelist_import():
 
     imported = 0
     for r in rows:
+        # Preserve original Digiflazz metadata type, classification based on source_command
+        # products.type = metadata from Digiflazz, NOT classification
+        source_cmd = r.get("source_command")
+        product_type = r.get("type") or "prepaid"  # Preserve metadata, default to "prepaid" jika kosong
+        
         upsert_product(
             sku=r["sku"], name=r["name"], category=r["category"], brand=r["brand"],
-            type_=r["type"] or "prepaid", base_price=int(r["price"]),
+            type_=product_type, base_price=int(r["price"]),
             margin=margin, description=r["description"] or "", is_active=1,
-            source_command=r.get("source_command"),
+            source_command=source_cmd,
         )
         imported += 1
     return jsonify({"ok": True, "imported": imported})
@@ -2068,6 +2073,9 @@ def api_digiflazz_sync():
                 "name": it.get("product_name") or it.get("name"),
                 "category": it.get("category"),
                 "brand": it.get("brand"),
+                # Use cmd parameter to determine correct classification type
+                # Preserve original Digiflazz metadata type
+                # Classification based on source_command, NOT by modifying type
                 "type": it.get("type", "prepaid"),
                 "price": int(it.get("price", 0) or 0),
                 "description": (it.get("desc") or it.get("description") or "")[:200],

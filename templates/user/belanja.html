@@ -95,7 +95,7 @@
       <div class="p-5 bg-slate-50/30">
         {% for p in products %}
         {% if loop.first %}
-<button type="button" data-pid="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-sku="{{ p.sku }}" data-type="{{ p.type }}"
+<button type="button" data-pid="{{ p.id }}" data-name="{{ p.name }}" data-price="{{ p.price }}" data-sku="{{ p.sku }}" data-type="{{ p.type }}" data-source-command="{{ p.source_command }}"
                 class="buy-btn w-full bg-[#115E59] text-white font-bold py-3.5 rounded-xl shadow-md hover:bg-teal-700 transition active:scale-95 flex justify-center items-center gap-2">
           <span>Cek Tagihan</span>
         </button>
@@ -117,10 +117,15 @@
     btn.addEventListener('click', async () => {
       const target = document.getElementById('target').value.trim();
       if (!target) { return notifyError('Nomor tujuan wajib diisi'); }
-      const pid = btn.dataset.pid, name = btn.dataset.name, price = parseInt(btn.dataset.price, 10);
-      const sku = btn.dataset.sku, type = btn.dataset.type;
+       const pid = btn.dataset.pid, name = btn.dataset.name, price = parseInt(btn.dataset.price, 10);
+       const sku = btn.dataset.sku, type = btn.dataset.type, sourceCommand = btn.dataset.sourceCommand;
 
-      if (type === 'postpaid') {
+        // Frontend classification based on server-provided data
+        // source_command has priority over type for classification
+        const isPostpaid = sourceCommand === 'pasca' || 
+                          (sourceCommand !== 'prepaid' && type === 'postpaid');
+       
+       if (isPostpaid) {
           // --- ALUR PASCABAYAR (CEK TAGIHAN DULU) ---
           Swal.fire({title: 'Mengecek Tagihan...', text: 'Mohon tunggu', didOpen: () => Swal.showLoading(), allowOutsideClick: false});
           

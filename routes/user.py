@@ -364,7 +364,10 @@ def buy():
     if not product or not product["is_active"]:
         return jsonify({"ok": False, "error": "Produk tidak tersedia"}), 404
 
-    is_postpaid = data.get("is_postpaid") == True or product.get("type") == "postpaid"
+    # Server-side classification - DO NOT trust client-provided is_postpaid
+    # Using source_command as primary source of truth
+    from models import get_product_classification
+    is_postpaid = get_product_classification(product) == "postpaid"
     
     # === POSTPAID: SERVER-SIDE VALIDATION ===
     if is_postpaid:
